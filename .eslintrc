@@ -1,0 +1,35 @@
+{
+  /* Extends from AirBnB Configuration */
+  "extends": [
+    "eslint:recommended",
+    "google",
+    "plugin:import/errors",
+    "plugin:import/warnings",
+    "prettier",
+    "prettier/react",
+  ],
+
+  /* Override Rules */
+  "rules": {
+    /* ESLint */
+    "no-invalid-this": 0,
+    "new-cap": 0,
+    "no-console": 0,
+  },
+
+  /* Linting Environment */
+  "env": {
+    "node": true,
+    "es6": true,
+  },
+
+  /* Linting Parser */
+  "parserOptions": {
+    "sourceType": "module",
+  },
+
+  /* Linting Plugins */
+  "plugins": [
+    "import",
+  ]
+}

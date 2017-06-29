@@ -1,0 +1,36 @@
+{
+  "name": "Bittrex",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Trong Nhan <imouto1994@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint src index.js",
+    "format": "prettier --trailing-comma es5 --write '{src}/**/*.js'",
+    "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
+    "precommit": "lint-staged",
+    "buy": "node buy.js",
+    "sell": "node sell.js"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write --trailing-comma es5",
+      "git add"
+    ]
+  },
+  "dependencies": {
+    "bluebird": "3.5.0",
+    "inquirer": "3.1.1",
+    "lodash": "4.17.4",
+    "superagent": "3.5.2"
+  },
+  "devDependencies": {
+    "eslint": "4.1.1",
+    "eslint-config-google": "0.8.0",
+    "eslint-config-prettier": "2.2.0",
+    "eslint-plugin-import": "2.6.0",
+    "husky": "0.14.1",
+    "lint-staged": "4.0.0",
+    "prettier": "1.5.2"
+  }
+}
