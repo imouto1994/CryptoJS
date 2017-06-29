@@ -4,8 +4,8 @@ const inquirer = require("inquirer");
 const floor = require("lodash/floor");
 
 const { getMarketTicker } = require("./src/ApiPublic");
-const { getAccountBalance } = require("./src/ApiAccount");
-const { makeBuyOrder } = require("./src/ApiMarket");
+const { getAccountBalance, getAccountOrder } = require("./src/ApiAccount");
+const { makeBuyOrder, cancelOrder, getOpenOrders } = require("./src/ApiMarket");
 const {
   CURRENCY_BITCOIN,
   CURRENCY_PRECISION,
@@ -14,22 +14,63 @@ const {
   EXCHANGE_RATE_STEP,
 } = require("./src/constants");
 
+function sleep(duration) {
+  return new Promise(function(resolve) {
+    setTimeout(function() {
+      resolve();
+    }, duration);
+  });
+}
+
 async function buyChunk(market, chunkSourceAmount, initialRate) {
-  let stepCount = 1;
   const actualAmount = floor(
     chunkSourceAmount / (1 + COMMISION_RATE),
     CURRENCY_PRECISION
   );
-  const chunkTargetAmount = floor(
-    actualAmount / initialRate * 1.05,
-    CURRENCY_PRECISION
-  );
-  const rate = initialRate + EXCHANGE_RATE_STEP * stepCount;
-  makeBuyOrder({
-    market,
-    quantity: floor(chunkTargetAmount / rate, CURRENCY_PRECISION),
-    rate,
-  });
+
+  for (let i = 0; i < 10; i++) {
+    // Calculate rate
+    let baseRate;
+    if (i > 0) {
+      const { Last: latestRate } = await getMarketTicker(market);
+      baseRate = latestRate;
+    } else {
+      baseRate = initialRate;
+    }
+    const rate = baseRate * (1 + EXCHANGE_RATE_STEP);
+
+    // Make buy order
+    const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
+    const orderId = await makeBuyOrder({
+      market,
+      quantity,
+      rate,
+    });
+
+    let remainingQuantity = quantity;
+    let isOrderClosed = false;
+    for (let j = 0; j < 10; j++) {
+      await sleep(500);
+      const order = await getAccountOrder(orderId);
+      if (order.Closed != null || !!order.IsOpen) {
+        isOrderClosed = true;
+        break;
+      } else if (remainingQuantity !== order.QuantityRemaining) {
+        remainingQuantity = order.QuantityRemaining;
+      } else {
+        try {
+          await cancelOrder(orderId);
+        } catch (error) {
+          // Failed to cancel order
+          isOrderClosed = true;
+          break;
+        }
+      }
+    }
+    if (isOrderClosed) {
+      break;
+    }
+  }
 }
 
 /**
@@ -105,9 +146,9 @@ async function main() {
   const { Last: latestRate } = await getMarketTicker(market);
   await Promise.all(
     // eslint-disable-next-line prefer-spread
-    Array.apply(null, new Array(CHUNK_COUNT)).map(() =>
-      buyChunk(market, chunkSourceAmount, latestRate)
-    )
+    Array.apply(null, new Array(CHUNK_COUNT)).map(function() {
+      buyChunk(market, chunkSourceAmount, latestRate);
+    })
   );
 }
 

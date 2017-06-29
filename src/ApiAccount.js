@@ -1,21 +1,7 @@
 const request = require("superagent");
 
-const { API_KEY, GET_BALANCE_URL, RETRY_COUNT } = require("./constants");
+const { API_KEY, GET_BALANCE_URL, GET_ORDER_URL } = require("./constants");
 const { getApiSign, getNonce } = require("./auth");
-
-/**
- * [handleAccountBalanceResponse description]
- * @param {[type]} res [description]
- * @return {[type]} [description]
- */
-function handleAccountBalanceResponse(res) {
-  const { body } = res;
-  if (body.success) {
-    return body.result;
-  } else {
-    throw new Error("Failed to fetch account balance");
-  }
-}
 
 /**
  * [getAccountBalance description]
@@ -28,10 +14,47 @@ function getAccountBalance(currency) {
   return request
     .get(url)
     .set("apisign", getApiSign(url))
-    .retry(RETRY_COUNT)
-    .then(handleAccountBalanceResponse);
+    .then(function(res) {
+      const { body } = res;
+      if (body.success) {
+        return body.result;
+      } else {
+        return Promise.reject();
+      }
+    })
+    .catch(function(error) {
+      if (error != null) {
+        console.log("ERROR", error);
+        throw new Error(
+          `Failed to fetch account balance for currency ${currency}`
+        );
+      }
+    });
+}
+
+function getAccountOrder(orderId) {
+  const url = `${GET_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
+
+  return request
+    .get(url)
+    .set("apisign", getApiSign(url))
+    .then(function(res) {
+      const { body } = res;
+      if (body.success) {
+        return body.result;
+      } else {
+        return Promise.reject();
+      }
+    })
+    .catch(error => {
+      if (error != null) {
+        console.log("ERROR", error);
+      }
+      throw new Error(`Failed to fetch info about order ${orderId}`);
+    });
 }
 
 module.exports = {
   getAccountBalance,
+  getAccountOrder,
 };

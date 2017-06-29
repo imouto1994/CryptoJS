@@ -6,23 +6,8 @@ const {
   SELL_LIMIT_ORDER_URL,
   CANCEL_ORDER_URL,
   GET_OPEN_ORDERS_URL,
-  RETRY_COUNT,
 } = require("./constants");
 const { getApiSign, getNonce } = require("./auth");
-
-/**
- * [handleBuyOrderResponse description]
- * @param {[type]} res [description]
- * @return {[type]} [description]
- */
-function handleBuyOrderResponse(res) {
-  const { body } = res;
-  if (body.success) {
-    return body.result.uuid;
-  } else {
-    throw new Error("Failed to make a buy order");
-  }
-}
 
 /**
  * [makeBuyOrder description]
@@ -37,22 +22,22 @@ function makeBuyOrder({ market, quantity, rate }) {
   return request
     .get(url)
     .set("apisign", getApiSign(url))
-    .retry(RETRY_COUNT)
-    .then(handleBuyOrderResponse);
-}
-
-/**
- * [handleSellOrderResponse description]
- * @param {[type]} res [description]
- * @return {[type]} [description]
- */
-function handleSellOrderResponse(res) {
-  const { body } = res;
-  if (body.success) {
-    return body.result.uuid;
-  } else {
-    throw new Error("Failed to make a sell order");
-  }
+    .then(function(res) {
+      const { body } = res;
+      if (body.success) {
+        return body.result.uuid;
+      } else {
+        return Promise.reject();
+      }
+    })
+    .catch(function(error) {
+      if (error != null) {
+        console.log("ERROR", error);
+      }
+      throw new Error(
+        `Failed to make a BUY order in market ${market} for amount of ${quantity} at rate ${rate}`
+      );
+    });
 }
 
 /**
@@ -68,22 +53,22 @@ function makeSellOrder({ market, quantity, rate }) {
   return request
     .get(url)
     .set("apisign", getApiSign(url))
-    .retry(RETRY_COUNT)
-    .then(handleSellOrderResponse);
-}
-
-/**
- * [handleCancelOrderResponse description]
- * @param {[type]} res [description]
- * @return {[type]} [description]
- */
-function handleCancelOrderResponse(res) {
-  const { body } = res;
-  if (body.success) {
-    return null;
-  } else {
-    throw new Error("Failed to cancel the order");
-  }
+    .then(function(res) {
+      const { body } = res;
+      if (body.success) {
+        return body.result.uuid;
+      } else {
+        return Promise.reject();
+      }
+    })
+    .catch(function(error) {
+      if (error != null) {
+        console.log("ERROR", error);
+      }
+      throw new Error(
+        `Failed to make a SELL order in market ${market} for amount of ${quantity} at rate ${rate}`
+      );
+    });
 }
 
 /**
@@ -97,22 +82,20 @@ function cancelOrder(orderId) {
   return request
     .get(url)
     .set("apisign", getApiSign(url))
-    .retry(RETRY_COUNT)
-    .then(handleCancelOrderResponse);
-}
-
-/**
- * [handleOpenOrdersResponse description]
- * @param {[type]} res [description]
- * @return {[type]} [description]
- */
-function handleOpenOrdersResponse(res) {
-  const { body } = res;
-  if (body.success) {
-    return body.result;
-  } else {
-    throw new Error("Failed to fetch list of open orders");
-  }
+    .then(function(res) {
+      const { body } = res;
+      if (body.success) {
+        return null;
+      } else {
+        return Promise.reject();
+      }
+    })
+    .catch(function(error) {
+      if (error != null) {
+        console.log("ERROR", error);
+      }
+      throw new Error(`Failed to cancel order ${orderId}`);
+    });
 }
 
 /**
@@ -126,8 +109,22 @@ function getOpenOrders(market) {
   return request
     .get(url)
     .set("apisign", getApiSign(url))
-    .retry(RETRY_COUNT)
-    .then(handleOpenOrdersResponse);
+    .then(function(res) {
+      const { body } = res;
+      if (body.success) {
+        return body.result;
+      } else {
+        return Promise.reject();
+      }
+    })
+    .catch(function(error) {
+      if (error != null) {
+        console.log("ERROR", error);
+      }
+      throw new Error(
+        `Failed to fetch list of open orders in market ${market}`
+      );
+    });
 }
 
 module.exports = {

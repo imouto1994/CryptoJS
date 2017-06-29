@@ -9,10 +9,12 @@ try {
 const { API_KEY, API_SECRET } = config;
 
 const API_URL = "https://bittrex.com/api/v1.1";
+
 const GET_MARKET_TICKER_URL = `${API_URL}/public/getticker/`;
 const GET_ORDER_BOOK_URL = `${API_URL}/public/getorderbook/`;
 
 const GET_BALANCE_URL = `${API_URL}/account/getbalance/`;
+const GET_ORDER_URL = `${API_URL}/account/getorder/`;
 
 const BUY_LIMIT_ORDER_URL = `${API_URL}/market/buylimit/`;
 const SELL_LIMIT_ORDER_URL = `${API_URL}/market/selllimit/`;
@@ -26,9 +28,13 @@ module.exports = {
 
   // API URLs
   API_URL,
+
   GET_MARKET_TICKER_URL,
   GET_ORDER_BOOK_URL,
+
   GET_BALANCE_URL,
+  GET_ORDER_URL,
+
   BUY_LIMIT_ORDER_URL,
   SELL_LIMIT_ORDER_URL,
   CANCEL_ORDER_URL,
@@ -40,8 +46,4 @@ module.exports = {
   COMMISION_RATE: 0.0025,
   CHUNK_COUNT: 3,
   EXCHANGE_RATE_STEP: 0.05,
-
-  // Network Constants
-  RETRY_COUNT: 3,
-  TIMEOUT_DURATION: 500,
 };
