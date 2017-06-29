@@ -5,6 +5,7 @@ const {
   BUY_LIMIT_ORDER_URL,
   SELL_LIMIT_ORDER_URL,
   CANCEL_ORDER_URL,
+  GET_OPEN_ORDERS_URL,
   RETRY_COUNT,
 } = require("./constants");
 const { getApiSign, getNonce } = require("./auth");
@@ -31,7 +32,7 @@ function handleBuyOrderResponse(res) {
  * @return {[type]} [description]
  */
 function makeBuyOrder(market, quantity, rate) {
-  const url = `${BUY_LIMIT_ORDER_URL}?apiKey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
+  const url = `${BUY_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
   return request
     .get(url)
@@ -62,7 +63,7 @@ function handleSellOrderResponse(res) {
  * @return {[type]} [description]
  */
 function makeSellOrder(market, quantity, rate) {
-  const url = `${SELL_LIMIT_ORDER_URL}?apiKey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
+  const url = `${SELL_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
   return request
     .get(url)
@@ -91,7 +92,7 @@ function handleCancelOrderResponse(res) {
  * @return {[type]} [description]
  */
 function cancelOrder(orderId) {
-  const url = `${CANCEL_ORDER_URL}?apiKey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
+  const url = `${CANCEL_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
 
   return request
     .get(url)
@@ -100,8 +101,38 @@ function cancelOrder(orderId) {
     .then(handleCancelOrderResponse);
 }
 
+/**
+ * [handleOpenOrdersResponse description]
+ * @param {[type]} res [description]
+ * @return {[type]} [description]
+ */
+function handleOpenOrdersResponse(res) {
+  const { body } = res;
+  if (body.success) {
+    return body.result;
+  } else {
+    throw new Error("Failed to fetch list of open orders");
+  }
+}
+
+/**
+ * [getOpenOrders description]
+ * @param {[type]} market [description]
+ * @return {[type]} [description]
+ */
+function getOpenOrders(market) {
+  const url = `${GET_OPEN_ORDERS_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}`;
+
+  return request
+    .get(url)
+    .set("apisign", getApiSign(url))
+    .retry(RETRY_COUNT)
+    .then(handleOpenOrdersResponse);
+}
+
 module.exports = {
   makeBuyOrder,
   makeSellOrder,
   cancelOrder,
+  getOpenOrders,
 };

@@ -9,18 +9,13 @@ const { CURRENCY_BITCOIN } = require("./src/constants");
 const QUESTIONS = [
   {
     type: "input",
-    name: "amount",
-    message: "How much BTC do you want to use?",
-  },
-  {
-    type: "input",
     name: "currency",
     message: "What is the currency?",
   },
   {
     type: "confirm",
     name: "confirm",
-    message: "Are you sure you want to activate the BUY BOT?",
+    message: "Are you sure you want to activate the TEST BOT?",
   },
 ];
 
@@ -28,12 +23,11 @@ const QUESTIONS = [
  * [handleAnswers description]
  * @param {[type]} options.currency [description]
  */
-function handleAnswers({ amount, currency, confirm }) {
+function handleAnswers({ currency, confirm }) {
   // Cancel case
   if (!confirm) {
     return;
   }
-
   // Currency input is empty
   if (currency.length === 0) {
     console.log("Currency is not defined");
@@ -41,13 +35,12 @@ function handleAnswers({ amount, currency, confirm }) {
   }
 
   const market = `${CURRENCY_BITCOIN}-${currency.toUpperCase()}`;
-
   return Promise.all([
     getAccountBalance(CURRENCY_BITCOIN),
     getMarketTicker(market),
   ]).then(([balance, ticker]) => {
     const { Available: availableAmount } = balance;
-    const { Last: lastSoldRate, Ask: lastAskRate } = ticker;
+    const { Last: lastSoldRate } = ticker;
     console.log("Available Amount", availableAmount);
     console.log("Last Sold Rate", lastSoldRate);
   });

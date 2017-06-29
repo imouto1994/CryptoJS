@@ -36,6 +36,7 @@ module.exports = {
 
   // Currencies
   CURRENCY_BITCOIN: "BTC",
+  COMMISION_FEE: 0.0025,
 
   // Default values
   RETRY_COUNT: 3,

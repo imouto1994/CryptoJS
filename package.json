@@ -10,7 +10,8 @@
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "precommit": "lint-staged",
     "buy": "node buy.js",
-    "sell": "node sell.js"
+    "sell": "node sell.js",
+    "test": "node test.js"
   },
   "lint-staged": {
     "*.js": [
