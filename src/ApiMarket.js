@@ -31,7 +31,7 @@ function handleBuyOrderResponse(res) {
  * @param {[type]} rate [description]
  * @return {[type]} [description]
  */
-function makeBuyOrder(market, quantity, rate) {
+function makeBuyOrder({ market, quantity, rate }) {
   const url = `${BUY_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
   return request
@@ -62,7 +62,7 @@ function handleSellOrderResponse(res) {
  * @param {[type]} rate [description]
  * @return {[type]} [description]
  */
-function makeSellOrder(market, quantity, rate) {
+function makeSellOrder({ market, quantity, rate }) {
   const url = `${SELL_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
   return request

@@ -52,7 +52,7 @@ function handleOrderBookResponse(res) {
  * @param {Number} depth [description]
  * @return {[type]} [description]
  */
-function getOrderBook(market, type = "both", depth = 20) {
+function getOrderBook({ market, type = "both", depth = 20 }) {
   const url = `${GET_ORDER_BOOK_URL}?market=${market}&type=${type}&depth=${depth}`;
 
   return request.get(url).retry(RETRY_COUNT).then(handleOrderBookResponse);

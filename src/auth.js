@@ -1,13 +1,14 @@
 const { API_SECRET } = require("./constants");
-const hmac = require("./hmac");
+const crypto = require("crypto");
 
 /**
  * [getApiSign description]
  * @param {[type]} url [description]
  * @return {[type]} [description]
  */
+const hmac = crypto.createHmac("sha512", API_SECRET);
 function getApiSign(url) {
-  return hmac.HmacSHA512(url, API_SECRET);
+  return hmac.update(url).digest("hex");
 }
 
 /**

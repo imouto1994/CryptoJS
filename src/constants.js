@@ -34,11 +34,14 @@ module.exports = {
   CANCEL_ORDER_URL,
   GET_OPEN_ORDERS_URL,
 
-  // Currencies
+  // Market Constants
   CURRENCY_BITCOIN: "BTC",
-  COMMISION_FEE: 0.0025,
+  CURRENCY_PRECISION: 8,
+  COMMISION_RATE: 0.0025,
+  CHUNK_COUNT: 3,
+  EXCHANGE_RATE_STEP: 0.05,
 
-  // Default values
+  // Network Constants
   RETRY_COUNT: 3,
   TIMEOUT_DURATION: 500,
 };

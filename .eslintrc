@@ -28,6 +28,7 @@
   /* Linting Parser */
   "parserOptions": {
     "sourceType": "module",
+    "ecmaVersion": 8
   },
 
   /* Linting Plugins */
