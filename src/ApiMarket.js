@@ -8,6 +8,7 @@ const {
   GET_OPEN_ORDERS_URL,
 } = require("./constants");
 const { getApiSign, getNonce } = require("./auth");
+const { logError } = require("./utils");
 
 /**
  * [makeBuyOrder description]
@@ -32,7 +33,7 @@ function makeBuyOrder({ market, quantity, rate }) {
     })
     .catch(function(error) {
       if (error != null) {
-        console.log("ERROR", error);
+        logError(error);
       }
       throw new Error(
         `Failed to make a BUY order in market ${market} for amount of ${quantity} at rate ${rate}`
@@ -63,7 +64,7 @@ function makeSellOrder({ market, quantity, rate }) {
     })
     .catch(function(error) {
       if (error != null) {
-        console.log("ERROR", error);
+        logError(error);
       }
       throw new Error(
         `Failed to make a SELL order in market ${market} for amount of ${quantity} at rate ${rate}`
@@ -92,7 +93,7 @@ function cancelOrder(orderId) {
     })
     .catch(function(error) {
       if (error != null) {
-        console.log("ERROR", error);
+        logError(error);
       }
       throw new Error(`Failed to cancel order ${orderId}`);
     });
@@ -119,7 +120,7 @@ function getOpenOrders(market) {
     })
     .catch(function(error) {
       if (error != null) {
-        console.log("ERROR", error);
+        logError(error);
       }
       throw new Error(
         `Failed to fetch list of open orders in market ${market}`

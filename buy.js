@@ -5,42 +5,66 @@ const floor = require("lodash/floor");
 
 const { getMarketTicker } = require("./src/ApiPublic");
 const { getAccountBalance, getAccountOrder } = require("./src/ApiAccount");
-const { makeBuyOrder, cancelOrder, getOpenOrders } = require("./src/ApiMarket");
+const { makeBuyOrder, cancelOrder } = require("./src/ApiMarket");
 const {
   CURRENCY_BITCOIN,
   CURRENCY_PRECISION,
-  CHUNK_COUNT,
+  BUY_CHUNK_COUNT,
   COMMISION_RATE,
   EXCHANGE_RATE_STEP,
 } = require("./src/constants");
+const {
+  sleep,
+  isEqual,
+  logInfo,
+  logWarning,
+  logError,
+  logSuccess,
+} = require("./src/utils");
 
-function sleep(duration) {
-  return new Promise(function(resolve) {
-    setTimeout(function() {
-      resolve();
-    }, duration);
-  });
-}
-
-async function buyChunk(market, chunkSourceAmount, initialRate) {
+/**
+ * [buyChunk description]
+ * @param {[type]} market [description]
+ * @param {[type]} chunkSourceAmount [description]
+ * @param {[type]} initialRate [description]
+ * @return {[type]} [description]
+ */
+async function buyChunk({
+  market,
+  chunkSourceAmount,
+  initialRate,
+  sourceCurrency,
+  targetCurrency,
+}) {
   const actualAmount = floor(
     chunkSourceAmount / (1 + COMMISION_RATE),
     CURRENCY_PRECISION
+  );
+  logInfo(
+    `Excluding commission fee, we will actually use ${actualAmount} ${sourceCurrency} to purchase ${targetCurrency} chunk`
   );
 
   for (let i = 0; i < 10; i++) {
     // Calculate rate
     let baseRate;
     if (i > 0) {
-      const { Last: latestRate } = await getMarketTicker(market);
+      const { Ask: latestRate } = await getMarketTicker(market);
       baseRate = latestRate;
     } else {
       baseRate = initialRate;
     }
-    const rate = baseRate * (1 + EXCHANGE_RATE_STEP);
 
     // Make buy order
+    const rate = baseRate * (1 + EXCHANGE_RATE_STEP);
+    if (rate >= initialRate * 2) {
+      logError(
+        `Current rate ${rate} has been too big comparing to the initial rate ${initialRate}. ` +
+          `We will stop attempting to buy this chunk.`
+      );
+      break;
+    }
     const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
+    logInfo(`Attempted to buy ${quantity} ${targetCurrency} at rate ${rate}`);
     const orderId = await makeBuyOrder({
       market,
       quantity,
@@ -49,76 +73,114 @@ async function buyChunk(market, chunkSourceAmount, initialRate) {
 
     let remainingQuantity = quantity;
     let isOrderClosed = false;
-    for (let j = 0; j < 10; j++) {
-      await sleep(500);
+    let pendingOrderCounter = 0;
+    for (let j = 0; j < 2; j++) {
+      logInfo(`Fetch information for order ${orderId}`);
       const order = await getAccountOrder(orderId);
-      if (order.Closed != null || !!order.IsOpen) {
+      const {
+        Closed: orderClosedTime,
+        IsOpen: isOrderOpened,
+        QuantityRemaining: orderRemaining,
+      } = order;
+      // Order is closed
+      if (orderClosedTime != null || !!isOrderOpened) {
+        logSuccess(
+          `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
+        );
         isOrderClosed = true;
         break;
-      } else if (remainingQuantity !== order.QuantityRemaining) {
+      } else if (!isEqual(remainingQuantity, orderRemaining)) {
+        // Order is still being filled
         remainingQuantity = order.QuantityRemaining;
+        pendingOrderCounter = 0;
+        logInfo(
+          `Order is partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+        );
       } else {
-        try {
-          await cancelOrder(orderId);
-        } catch (error) {
-          // Failed to cancel order
-          isOrderClosed = true;
-          break;
+        // Order remaining is unchanged after 3 consecutive checks
+        if (pendingOrderCounter === 3) {
+          // Cancel order
+          try {
+            logWarning(
+              `Attempted to cancel the current order since order is not filled well`
+            );
+            await cancelOrder(orderId);
+          } catch (error) {
+            // Failed to cancel order, might be because order is closed
+            logSuccess(
+              `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
+            );
+            isOrderClosed = true;
+            break;
+          }
         }
+        pendingOrderCounter++;
       }
+      await sleep(250);
     }
     if (isOrderClosed) {
       break;
+    } else {
+      // Cancel order
+      try {
+        logWarning(
+          `Attempted to cancel the current order since it took too long`
+        );
+        await cancelOrder(orderId);
+      } catch (error) {
+        // Failed to cancel order, might be because order is closed
+        logSuccess(
+          `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
+        );
+        isOrderClosed = true;
+        break;
+      }
     }
   }
 }
 
 /**
- * [main description]
+ * Run buy bot to buy as much amount of target currency as possible with the given amount of source currency
  * @return {[type]} [description]
  */
-async function main() {
+async function runBuyBot() {
   // Define source currency
   const sourceCurrency = CURRENCY_BITCOIN;
 
   // Get current balance and prompt user the amount he wants to use
-  const balance = await getAccountBalance(CURRENCY_BITCOIN);
-  const { amount } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "amount",
-      message: `Your current BTC balance is ${balance.Available} BTC. How much BTC do you want to use?`,
-    },
-  ]);
-  const sourceAmount = parseInt(amount.trim(), 10);
+  const balance = await getAccountBalance(sourceCurrency);
+  const { amount } = await inquirer.prompt({
+    type: "input",
+    name: "amount",
+    message:
+      `Your current ${sourceCurrency} balance is ${balance.Available} ${sourceCurrency}. ` +
+      `How much ${sourceCurrency} do you want to use?`,
+  });
+  const sourceAmount = parseFloat(amount.trim());
   if (isNaN(sourceAmount)) {
-    console.log("Amount is not defined");
+    logError("Source amount is not defined");
     return;
   }
 
   // Confirm the amount user indicated
-  const { confirm: amountConfirm } = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "confirm",
-      message: `Are you sure you want to spend ${sourceAmount} BTC?`,
-    },
-  ]);
+  const { confirm: amountConfirm } = await inquirer.prompt({
+    type: "confirm",
+    name: "confirm",
+    message: `Are you sure you want to spend ${sourceAmount} ${sourceCurrency}?`,
+  });
   if (!amountConfirm) {
-    console.log("Be patient and decide carefully again!");
+    logWarning("Be patient and decide carefully again!");
     return;
   }
 
   // Prompt from user the target currency he wants to exchange
-  const { currency } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "currency",
-      message: "What is the currency?",
-    },
-  ]);
+  const { currency } = await inquirer.prompt({
+    type: "input",
+    name: "currency",
+    message: "What is the target currency?",
+  });
   if (currency.trim().length === 0) {
-    console.log("Currency is not defined");
+    logError("Target currency is not defined");
     return;
   }
   // Define target currency & corresponding market
@@ -126,30 +188,37 @@ async function main() {
   const market = `${sourceCurrency}-${targetCurrency}`;
 
   // Confirm the currency user indicated
-  const { confirm: currencyConfirm } = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "confirm",
-      message: `Are you sure you want to activate the BUY BOT for currency ${targetCurrency}?`,
-    },
-  ]);
+  const { confirm: currencyConfirm } = await inquirer.prompt({
+    type: "confirm",
+    name: "confirm",
+    message: `Are you sure you want to activate the BUY BOT for target currency ${targetCurrency}?`,
+  });
   if (!currencyConfirm) {
-    console.log("Be patient and decide carefully again!");
+    logWarning("Be patient and decide carefully again!");
     return;
   }
 
   // Buy by chunks
   const chunkSourceAmount = floor(
-    sourceAmount / CHUNK_COUNT,
+    sourceAmount / BUY_CHUNK_COUNT,
     CURRENCY_PRECISION
   );
-  const { Last: latestRate } = await getMarketTicker(market);
+  logInfo(`We will use ${chunkSourceAmount} ${sourceCurrency} for each chunk`);
+  const { Ask: latestRate } = await getMarketTicker(market);
   await Promise.all(
     // eslint-disable-next-line prefer-spread
-    Array.apply(null, new Array(CHUNK_COUNT)).map(function() {
-      buyChunk(market, chunkSourceAmount, latestRate);
+    Array.apply(null, new Array(BUY_CHUNK_COUNT)).map(function() {
+      buyChunk({
+        market,
+        chunkSourceAmount,
+        initialRate: latestRate,
+        sourceCurrency,
+        targetCurrency,
+      });
     })
   );
+  logSuccess("All chunk buy orders are processed successfully!");
 }
 
-main();
+// Activate BUY BOT
+runBuyBot();

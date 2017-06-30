@@ -1,6 +1,7 @@
 const request = require("superagent");
 
 const { GET_MARKET_TICKER_URL, GET_ORDER_BOOK_URL } = require("./constants");
+const { logError } = require("./utils");
 
 /**
  * [getMarketTicker description]
@@ -9,7 +10,6 @@ const { GET_MARKET_TICKER_URL, GET_ORDER_BOOK_URL } = require("./constants");
  */
 function getMarketTicker(market) {
   const url = `${GET_MARKET_TICKER_URL}?market=${market}`;
-
   return request
     .get(url)
     .then(function(res) {
@@ -22,7 +22,7 @@ function getMarketTicker(market) {
     })
     .catch(function(error) {
       if (error != null) {
-        console.log("ERROR", error);
+        logError(error);
       }
       throw new Error(`Failed to fetch ticker for market ${market}`);
     });
@@ -50,7 +50,7 @@ function getOrderBook({ market, type = "both", depth = 20 }) {
     })
     .catch(function(error) {
       if (error != null) {
-        console.log("ERROR", error);
+        logError(error);
       }
       throw new Error(
         `Failed to fetch order book for market ${market} with type ${type.toUpperCase()}`

@@ -6,8 +6,8 @@ const crypto = require("crypto");
  * @param {[type]} url [description]
  * @return {[type]} [description]
  */
-const hmac = crypto.createHmac("sha512", API_SECRET);
 function getApiSign(url) {
+  const hmac = crypto.createHmac("sha512", API_SECRET);
   return hmac.update(url).digest("hex");
 }
 

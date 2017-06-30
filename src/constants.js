@@ -15,6 +15,7 @@ const GET_ORDER_BOOK_URL = `${API_URL}/public/getorderbook/`;
 
 const GET_BALANCE_URL = `${API_URL}/account/getbalance/`;
 const GET_ORDER_URL = `${API_URL}/account/getorder/`;
+const GET_ORDERS_HISTORY_URL = `${API_URL}/account/getorderhistory/`;
 
 const BUY_LIMIT_ORDER_URL = `${API_URL}/market/buylimit/`;
 const SELL_LIMIT_ORDER_URL = `${API_URL}/market/selllimit/`;
@@ -34,6 +35,7 @@ module.exports = {
 
   GET_BALANCE_URL,
   GET_ORDER_URL,
+  GET_ORDERS_HISTORY_URL,
 
   BUY_LIMIT_ORDER_URL,
   SELL_LIMIT_ORDER_URL,
@@ -44,6 +46,8 @@ module.exports = {
   CURRENCY_BITCOIN: "BTC",
   CURRENCY_PRECISION: 8,
   COMMISION_RATE: 0.0025,
-  CHUNK_COUNT: 3,
+  BUY_CHUNK_COUNT: 3,
+  SELL_CHUNK_COUNT: 3,
   EXCHANGE_RATE_STEP: 0.05,
+  EPSILON: 0.0000000001,
 };
