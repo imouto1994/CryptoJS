@@ -66,7 +66,7 @@ async function sellChunk({
           );
           break;
         } catch (err) {
-          logInfo(
+          logWarning(
             `Failed to attempt to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate} due to no sufficient funds`
           );
         }
@@ -82,7 +82,7 @@ async function sellChunk({
           `Attempted to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate}`
         );
       } catch (err) {
-        logInfo(
+        logWarning(
           `Failed to attempt to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate} due to no sufficient funds`
         );
       }
