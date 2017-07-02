@@ -4,25 +4,28 @@ const inquirer = require("inquirer");
 
 const { getMarketTicker, getOrderBook } = require("./src/ApiPublic");
 const { getAccountBalance, getAccountOrder } = require("./src/ApiAccount");
+const { makeSellOrder } = require("./src/ApiMarket");
 const { CURRENCY_BITCOIN } = require("./src/constants");
 const { logInfo, logSuccess, logError, sleep } = require("./src/utils");
 
-async function getOrderBooks(market) {
-  // for (let i = 0; i < 20; i++) {
-  //   const orderBook = await getOrderBook({ market, type: "buy", depth: 50 });
-  //   const top20Orders = orderBook
-  //     .slice()
-  //     .sort((a, b) => b.Rate - a.Rate)
-  //     .slice(0, 20)
-  //     .map(a => a.Rate);
-  //   logInfo("Highest Buy", top20Orders, "\n");
-  //   await sleep(500);
-  // }
+async function trySell(market) {
+  try {
+    console.time("SELL");
+    await makeSellOrder({
+      market: "BTC-XRP",
+      quantity: 100000,
+      rate: 0.1,
+    });
+  } catch (err) {
+    console.log(err);
+    console.timeEnd("SELL");
+  }
 }
 
 async function getMarketTickers(market) {
+  console.time("ORDER");
   const order = await getAccountOrder("93a23438-1d30-4a4f-97ea-5f89c038c6c9");
-  console.log(order);
+  console.timeEnd("ORDER");
 }
 
 /**
@@ -53,7 +56,7 @@ async function main() {
 
   const market = `${CURRENCY_BITCOIN}-${currency.toUpperCase()}`;
 
-  await Promise.all([getOrderBooks(market), getMarketTickers(market)]);
+  await Promise.all([getMarketTickers(market)]);
 }
 
 // Run program

@@ -1,5 +1,3 @@
-const request = require("superagent");
-
 const {
   API_KEY,
   BUY_LIMIT_ORDER_URL,
@@ -9,6 +7,7 @@ const {
 } = require("./constants");
 const { getApiSign, getNonce } = require("./auth");
 const { logError } = require("./utils");
+const { get } = require("./request");
 
 /**
  * [makeBuyOrder description]
@@ -20,9 +19,7 @@ const { logError } = require("./utils");
 function makeBuyOrder({ market, quantity, rate }) {
   const url = `${BUY_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
-  return request
-    .get(url)
-    .set("apisign", getApiSign(url))
+  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -33,7 +30,7 @@ function makeBuyOrder({ market, quantity, rate }) {
     })
     .catch(function(error) {
       if (error != null) {
-        logError(error);
+        logError(error.response.body);
       }
       throw new Error(
         `Failed to make a BUY order in market ${market} for amount of ${quantity} at rate ${rate}`
@@ -51,9 +48,7 @@ function makeBuyOrder({ market, quantity, rate }) {
 function makeSellOrder({ market, quantity, rate }) {
   const url = `${SELL_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
-  return request
-    .get(url)
-    .set("apisign", getApiSign(url))
+  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -64,7 +59,7 @@ function makeSellOrder({ market, quantity, rate }) {
     })
     .catch(function(error) {
       if (error != null) {
-        logError(error);
+        logError(error.response.body);
       }
       throw new Error(
         `Failed to make a SELL order in market ${market} for amount of ${quantity} at rate ${rate}`
@@ -80,9 +75,7 @@ function makeSellOrder({ market, quantity, rate }) {
 function cancelOrder(orderId) {
   const url = `${CANCEL_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
 
-  return request
-    .get(url)
-    .set("apisign", getApiSign(url))
+  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -93,7 +86,7 @@ function cancelOrder(orderId) {
     })
     .catch(function(error) {
       if (error != null) {
-        logError(error);
+        logError(error.response.body);
       }
       throw new Error(`Failed to cancel order ${orderId}`);
     });
@@ -107,9 +100,7 @@ function cancelOrder(orderId) {
 function getOpenOrders(market) {
   const url = `${GET_OPEN_ORDERS_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}`;
 
-  return request
-    .get(url)
-    .set("apisign", getApiSign(url))
+  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -120,7 +111,7 @@ function getOpenOrders(market) {
     })
     .catch(function(error) {
       if (error != null) {
-        logError(error);
+        logError(error.response.body);
       }
       throw new Error(
         `Failed to fetch list of open orders in market ${market}`

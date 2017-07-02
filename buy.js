@@ -5,16 +5,17 @@ const floor = require("lodash/floor");
 
 const { getMarketTicker } = require("./src/ApiPublic");
 const { getAccountBalance, getAccountOrder } = require("./src/ApiAccount");
-const { makeBuyOrder, cancelOrder } = require("./src/ApiMarket");
+const { makeBuyOrder, makeSellOrder, cancelOrder } = require("./src/ApiMarket");
 const {
   CURRENCY_BITCOIN,
   CURRENCY_PRECISION,
-  BUY_CHUNK_COUNT,
+  CHUNK_COUNT,
   COMMISION_RATE,
   EXCHANGE_RATE_STEP,
+  BUY_RATE,
+  SELL_RATE,
 } = require("./src/constants");
 const {
-  sleep,
   isEqual,
   logInfo,
   logWarning,
@@ -23,11 +24,190 @@ const {
 } = require("./src/utils");
 
 /**
+ * [sellChunk description]
+ * @param  {[type]} options.market            [description]
+ * @param  {[type]} options.chunkTargetAmount [description]
+ * @param  {[type]} options.baseRate          [description]
+ * @param  {[type]} options.sourceCurrency    [description]
+ * @param  {[type]} options.targetCurrency    [description]
+ * @param  {[type]} options.                  [description]
+ * @return {[type]}                           [description]
+ */
+async function sellChunk({
+  market,
+  chunkTargetAmount,
+  baseRate,
+  sourceCurrency,
+  targetCurrency,
+}) {
+  for (let i = 0; i < 5; i++) {
+    // Calculate rate
+    let rate;
+    if (i > 0) {
+      const { Bid: latestRate } = await getMarketTicker(market);
+      rate = floor(latestRate * (1 - EXCHANGE_RATE_STEP), CURRENCY_PRECISION);
+    } else {
+      rate = floor(baseRate * SELL_RATE, CURRENCY_PRECISION);
+    }
+    const quantity = chunkTargetAmount;
+
+    // Make sell order
+    let orderId;
+    if (i === 0) {
+      for (let j = 0; j < 45; j++) {
+        try {
+          orderId = await makeSellOrder({
+            market,
+            quantity,
+            rate,
+          });
+          logInfo(
+            `Attempted to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate}`
+          );
+          break;
+        } catch (err) {
+          logInfo(
+            `Failed to attempt to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate} due to no sufficient funds`
+          );
+        }
+      }
+    } else {
+      try {
+        orderId = await makeSellOrder({
+          market,
+          quantity,
+          rate,
+        });
+        logInfo(
+          `Attempted to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate}`
+        );
+      } catch (err) {
+        logInfo(
+          `Failed to attempt to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate} due to no sufficient funds`
+        );
+      }
+    }
+
+    if (orderId == null) {
+      continue;
+    }
+    let remainingQuantity = 0;
+    let isOrderClosed = false;
+    const limit = i === 0 ? 35 : 25;
+    for (let j = 0; j < limit; j++) {
+      logInfo(`Fetch information for order ${orderId}`);
+      const order = await getAccountOrder(orderId);
+      const {
+        Closed: orderClosedTime,
+        IsOpen: isOrderOpened,
+        QuantityRemaining: orderRemaining,
+      } = order;
+      // Order is closed
+      if (orderClosedTime != null || !isOrderOpened) {
+        logSuccess(
+          `Order completed successfully for selling ${quantity} ${targetCurrency} at rate ${rate}`
+        );
+        isOrderClosed = true;
+        break;
+      } else if (!isEqual(remainingQuantity, orderRemaining)) {
+        // Order is still being filled
+        remainingQuantity = orderRemaining;
+        logInfo(
+          `Order is now partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+        );
+      } else {
+        logWarning(
+          `Order is still stucked at ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+        );
+      }
+    }
+    if (!isOrderClosed) {
+      // Cancel order
+      try {
+        logWarning(
+          `Attempted to cancel the current order since it took too long`
+        );
+        await cancelOrder(orderId);
+      } catch (error) {
+        // Failed to cancel order, might be because order is closed
+        logSuccess(
+          `Order completed successfully for selling ${quantity} ${targetCurrency} at rate ${rate}`
+        );
+        isOrderClosed = true;
+        break;
+      }
+    }
+
+    if (isOrderClosed) {
+      break;
+    }
+  }
+}
+
+/**
+ * [trackCloseOrder description]
+ * @param  {[type]} options.orderId        [description]
+ * @param  {[type]} options.quantity       [description]
+ * @param  {[type]} options.rate           [description]
+ * @param  {[type]} options.targetCurrency [description]
+ * @return {[type]}                        [description]
+ */
+async function trackCloseOrder({ orderId, quantity, rate, targetCurrency }) {
+  let remainingQuantity = quantity;
+  let isOrderClosed = false;
+  for (let j = 0; j < 35; j++) {
+    logInfo(`Fetch information for order ${orderId} ${j}`);
+    const order = await getAccountOrder(orderId);
+    const {
+      Closed: orderClosedTime,
+      IsOpen: isOrderOpened,
+      QuantityRemaining: orderRemaining,
+    } = order;
+    // Order is closed
+    if (orderClosedTime != null || !isOrderOpened) {
+      logSuccess(
+        `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
+      );
+      isOrderClosed = true;
+      break;
+    } else if (!isEqual(remainingQuantity, orderRemaining)) {
+      // Order is still being filled
+      remainingQuantity = orderRemaining;
+      logInfo(
+        `Order is now partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+      );
+    } else {
+      logWarning(
+        `Order is still stucked at ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+      );
+    }
+  }
+  if (!isOrderClosed) {
+    // Cancel order
+    try {
+      logWarning(
+        `Attempted to cancel the current order since it took too long`
+      );
+      await cancelOrder(orderId);
+    } catch (error) {
+      // Failed to cancel order, might be because order is closed
+      logSuccess(
+        `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate} since cancel request failed`
+      );
+      isOrderClosed = true;
+    }
+  }
+}
+
+/**
  * [buyChunk description]
- * @param {[type]} market [description]
- * @param {[type]} chunkSourceAmount [description]
- * @param {[type]} initialRate [description]
- * @return {[type]} [description]
+ * @param  {[type]} options.market            [description]
+ * @param  {[type]} options.chunkSourceAmount [description]
+ * @param  {[type]} options.initialRate       [description]
+ * @param  {[type]} options.sourceCurrency    [description]
+ * @param  {[type]} options.targetCurrency    [description]
+ * @param  {[type]} options.                  [description]
+ * @return {[type]}                           [description]
  */
 async function buyChunk({
   market,
@@ -44,101 +224,34 @@ async function buyChunk({
     `Excluding commission fee, we will actually use ${actualAmount} ${sourceCurrency} to purchase ${targetCurrency} chunk`
   );
 
-  for (let i = 0; i < 3; i++) {
-    // Calculate rate
-    let baseRate;
-    if (i > 0) {
-      const { Ask: latestRate } = await getMarketTicker(market);
-      baseRate = latestRate;
-    } else {
-      baseRate = initialRate;
-    }
+  // Calculate rate
+  const baseRate = initialRate;
+  const rate = floor(baseRate * BUY_RATE, CURRENCY_PRECISION);
+  const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
 
-    // Make buy order
-    const rate = baseRate * (1 + EXCHANGE_RATE_STEP);
-    if (rate >= initialRate * 2) {
-      logError(
-        `Current rate ${rate} has been too big comparing to the initial rate ${initialRate}. ` +
-          `We will stop attempting to buy this chunk.`
-      );
-      break;
-    }
-    const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
-    logWarning(
-      `Attempted to buy ${quantity} ${targetCurrency} at rate ${rate}`
-    );
-    const orderId = await makeBuyOrder({
+  // Make buy order
+  const orderId = await makeBuyOrder({
+    market,
+    quantity,
+    rate,
+  });
+  logWarning(`Attempted to buy ${quantity} ${targetCurrency} at rate ${rate}`);
+
+  await Promise.all([
+    sellChunk({
       market,
+      chunkTargetAmount: quantity,
+      baseRate,
+      sourceCurrency,
+      targetCurrency,
+    }),
+    trackCloseOrder({
+      orderId,
       quantity,
       rate,
-    });
-
-    let remainingQuantity = quantity;
-    let isOrderClosed = false;
-    let pendingOrderCounter = 0;
-    for (let j = 0; j < 15; j++) {
-      logInfo(`Fetch information for order ${orderId} ${j}`);
-      const order = await getAccountOrder(orderId);
-      const {
-        Closed: orderClosedTime,
-        IsOpen: isOrderOpened,
-        QuantityRemaining: orderRemaining,
-      } = order;
-      // Order is closed
-      if (orderClosedTime != null || !isOrderOpened) {
-        logSuccess(
-          `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
-        );
-        isOrderClosed = true;
-        break;
-      } else if (!isEqual(remainingQuantity, orderRemaining)) {
-        // Order is still being filled
-        remainingQuantity = orderRemaining;
-        pendingOrderCounter = 0;
-        logInfo(
-          `Order is partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
-        );
-      } else {
-        // Order remaining is unchanged after 3 consecutive checks
-        if (pendingOrderCounter === 5) {
-          // Cancel order
-          try {
-            logWarning(
-              `Attempted to cancel the current order ${orderId} since order is not filled well`
-            );
-            await cancelOrder(orderId);
-          } catch (error) {
-            // Failed to cancel order, might be because order is closed
-            logSuccess(
-              `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
-            );
-            isOrderClosed = true;
-            break;
-          }
-        }
-        pendingOrderCounter++;
-      }
-      await sleep(250);
-    }
-    if (isOrderClosed) {
-      break;
-    } else {
-      // Cancel order
-      try {
-        logWarning(
-          `Attempted to cancel the current order since it took too long`
-        );
-        await cancelOrder(orderId);
-      } catch (error) {
-        // Failed to cancel order, might be because order is closed
-        logSuccess(
-          `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
-        );
-        isOrderClosed = true;
-        break;
-      }
-    }
-  }
+      targetCurrency,
+    }),
+  ]);
 }
 
 /**
@@ -189,27 +302,18 @@ async function runBot() {
   const targetCurrency = currency.trim().toUpperCase();
   const market = `${sourceCurrency}-${targetCurrency}`;
 
-  // Confirm the currency user indicated
-  const { confirm: currencyConfirm } = await inquirer.prompt({
-    type: "confirm",
-    name: "confirm",
-    message: `Are you sure you want to activate the BUY BOT for target currency ${targetCurrency}?`,
-  });
-  if (!currencyConfirm) {
-    logWarning("Be patient and decide carefully again!");
-    return;
-  }
-
   // Buy by chunks
   const chunkSourceAmount = floor(
-    sourceAmount / BUY_CHUNK_COUNT,
+    sourceAmount / CHUNK_COUNT,
     CURRENCY_PRECISION
   );
-  logInfo(`We will use ${chunkSourceAmount} ${sourceCurrency} for each chunk`);
+  logInfo(
+    `We will use ${chunkSourceAmount} ${sourceCurrency} for ${CHUNK_COUNT} chunk(s)`
+  );
   const { Ask: latestRate } = await getMarketTicker(market);
   await Promise.all(
     // eslint-disable-next-line prefer-spread
-    Array.apply(null, new Array(BUY_CHUNK_COUNT)).map(function() {
+    Array.apply(null, new Array(CHUNK_COUNT)).map(function() {
       buyChunk({
         market,
         chunkSourceAmount,

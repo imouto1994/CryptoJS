@@ -14,10 +14,6 @@ function sleep(duration) {
   });
 }
 
-function log(color, ...strings) {
-  console.log(color(`[${new Date().toLocaleString()}]: ${strings.join(" ")}`));
-}
-
 const infoChalk = chalk.cyanBright;
 function logInfo(...strings) {
   console.log(
@@ -49,7 +45,6 @@ function logSuccess(...strings) {
 module.exports = {
   isEqual,
   sleep,
-  log,
   logInfo,
   logError,
   logWarning,

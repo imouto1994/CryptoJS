@@ -1,5 +1,3 @@
-const request = require("superagent");
-
 const {
   API_KEY,
   GET_BALANCE_URL,
@@ -8,6 +6,7 @@ const {
 } = require("./constants");
 const { getApiSign, getNonce } = require("./auth");
 const { logError } = require("./utils");
+const { get } = require("./request");
 
 /**
  * [getAccountBalance description]
@@ -17,9 +16,7 @@ const { logError } = require("./utils");
 function getAccountBalance(currency) {
   const url = `${GET_BALANCE_URL}?apikey=${API_KEY}&nonce=${getNonce()}&currency=${currency}`;
 
-  return request
-    .get(url)
-    .set("apisign", getApiSign(url))
+  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -30,7 +27,7 @@ function getAccountBalance(currency) {
     })
     .catch(function(error) {
       if (error != null) {
-        logError(error);
+        logError(error.response.body);
         throw new Error(
           `Failed to fetch account balance for currency ${currency}`
         );
@@ -41,9 +38,7 @@ function getAccountBalance(currency) {
 function getAccountOrder(orderId) {
   const url = `${GET_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
 
-  return request
-    .get(url)
-    .set("apisign", getApiSign(url))
+  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -54,7 +49,7 @@ function getAccountOrder(orderId) {
     })
     .catch(error => {
       if (error != null) {
-        logError(error);
+        logError(error.response.body);
       }
       throw new Error(`Failed to fetch info about order ${orderId}`);
     });
@@ -63,9 +58,7 @@ function getAccountOrder(orderId) {
 function getAccountOrdersHistory(market) {
   const url = `${GET_ORDERS_HISTORY_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}`;
 
-  return request
-    .get(url)
-    .set("apisign", getApiSign(url))
+  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -76,7 +69,7 @@ function getAccountOrdersHistory(market) {
     })
     .catch(error => {
       if (error != null) {
-        logError(error);
+        logError(error.response.body);
       }
       throw new Error(`Failed to fetch order history for market ${market}`);
     });
