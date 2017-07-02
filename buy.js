@@ -44,7 +44,7 @@ async function buyChunk({
     `Excluding commission fee, we will actually use ${actualAmount} ${sourceCurrency} to purchase ${targetCurrency} chunk`
   );
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 3; i++) {
     // Calculate rate
     let baseRate;
     if (i > 0) {
@@ -64,7 +64,9 @@ async function buyChunk({
       break;
     }
     const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
-    logInfo(`Attempted to buy ${quantity} ${targetCurrency} at rate ${rate}`);
+    logWarning(
+      `Attempted to buy ${quantity} ${targetCurrency} at rate ${rate}`
+    );
     const orderId = await makeBuyOrder({
       market,
       quantity,
@@ -74,8 +76,8 @@ async function buyChunk({
     let remainingQuantity = quantity;
     let isOrderClosed = false;
     let pendingOrderCounter = 0;
-    for (let j = 0; j < 2; j++) {
-      logInfo(`Fetch information for order ${orderId}`);
+    for (let j = 0; j < 15; j++) {
+      logInfo(`Fetch information for order ${orderId} ${j}`);
       const order = await getAccountOrder(orderId);
       const {
         Closed: orderClosedTime,
@@ -83,7 +85,7 @@ async function buyChunk({
         QuantityRemaining: orderRemaining,
       } = order;
       // Order is closed
-      if (orderClosedTime != null || !!isOrderOpened) {
+      if (orderClosedTime != null || !isOrderOpened) {
         logSuccess(
           `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
         );
@@ -91,18 +93,18 @@ async function buyChunk({
         break;
       } else if (!isEqual(remainingQuantity, orderRemaining)) {
         // Order is still being filled
-        remainingQuantity = order.QuantityRemaining;
+        remainingQuantity = orderRemaining;
         pendingOrderCounter = 0;
         logInfo(
           `Order is partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
         );
       } else {
         // Order remaining is unchanged after 3 consecutive checks
-        if (pendingOrderCounter === 3) {
+        if (pendingOrderCounter === 5) {
           // Cancel order
           try {
             logWarning(
-              `Attempted to cancel the current order since order is not filled well`
+              `Attempted to cancel the current order ${orderId} since order is not filled well`
             );
             await cancelOrder(orderId);
           } catch (error) {
@@ -143,7 +145,7 @@ async function buyChunk({
  * Run buy bot to buy as much amount of target currency as possible with the given amount of source currency
  * @return {[type]} [description]
  */
-async function runBuyBot() {
+async function runBot() {
   // Define source currency
   const sourceCurrency = CURRENCY_BITCOIN;
 
@@ -217,8 +219,7 @@ async function runBuyBot() {
       });
     })
   );
-  logSuccess("All chunk buy orders are processed successfully!");
 }
 
 // Activate BUY BOT
-runBuyBot();
+runBot();
