@@ -3,7 +3,7 @@ global.Promise = require("bluebird");
 const inquirer = require("inquirer");
 const floor = require("lodash/floor");
 
-const { getMarketTicker } = require("./src/ApiPublic");
+const { getMarketTicker, getMarketSummary } = require("./src/ApiPublic");
 const { getAccountBalance, getAccountOrder } = require("./src/ApiAccount");
 const { makeBuyOrder, makeSellOrder, cancelOrder } = require("./src/ApiMarket");
 const {
@@ -44,47 +44,28 @@ async function sellChunk(params) {
 
     // Make sell order
     let orderId;
-    if (i === 0) {
-      for (let j = 0; j < 45; j++) {
-        try {
-          orderId = await makeSellOrder({
-            market,
-            quantity,
-            rate,
-          });
-          logInfo(
-            `Attempted to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate}`
-          );
-          break;
-        } catch (err) {
-          logWarning(
-            `Failed to attempt to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate} due to no sufficient funds`
-          );
-        }
-      }
-    } else {
-      try {
-        orderId = await makeSellOrder({
-          market,
-          quantity,
-          rate,
-        });
-        logInfo(
-          `Attempted to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate}`
-        );
-      } catch (err) {
-        logWarning(
-          `Failed to attempt to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate} due to no sufficient funds`
-        );
-      }
+    try {
+      orderId = await makeSellOrder({
+        market,
+        quantity,
+        rate,
+      });
+      logInfo(
+        `Attempted to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate}`
+      );
+    } catch (err) {
+      logWarning(
+        `Failed to attempt to sell ${chunkTargetAmount} ${targetCurrency} at rate ${rate} due to no sufficient funds`
+      );
     }
 
     if (orderId == null) {
       continue;
     }
+
     let remainingQuantity = 0;
     let isOrderClosed = false;
-    const limit = i === 0 ? 35 : 25;
+    const limit = i === 0 ? 40 : 30;
     for (let j = 0; j < limit; j++) {
       logInfo(`Fetch information for order ${orderId}`);
       const order = await getAccountOrder(orderId);
@@ -141,7 +122,7 @@ async function sellChunk(params) {
  * @param {any} params 
  */
 async function trackCloseOrder(params) {
-  const { orderId, quantity, rate, targetCurrency } = params;
+  const { orderId, quantity, baseRate, rate, targetCurrency, market } = params;
 
   let remainingQuantity = quantity;
   let isOrderClosed = false;
@@ -187,6 +168,15 @@ async function trackCloseOrder(params) {
       isOrderClosed = true;
     }
   }
+
+  if (isOrderClosed) {
+    await sellChunk({
+      market,
+      chunkTargetAmount: quantity,
+      baseRate,
+      targetCurrency,
+    });
+  }
 }
 
 /**
@@ -224,21 +214,14 @@ async function buyChunk(params) {
   });
   logWarning(`Attempted to buy ${quantity} ${targetCurrency} at rate ${rate}`);
 
-  await Promise.all([
-    sellChunk({
-      market,
-      chunkTargetAmount: quantity,
-      baseRate,
-      sourceCurrency,
-      targetCurrency,
-    }),
-    trackCloseOrder({
-      orderId,
-      quantity,
-      rate,
-      targetCurrency,
-    }),
-  ]);
+  await trackCloseOrder({
+    orderId,
+    quantity,
+    baseRate,
+    rate,
+    targetCurrency,
+    market,
+  });
 }
 
 /**
@@ -298,14 +281,15 @@ async function runBot() {
   logInfo(
     `We will use ${chunkSourceAmount} ${sourceCurrency} for ${CHUNK_COUNT} chunk(s)`
   );
-  const { Ask: latestRate } = await getMarketTicker(market);
+  const res = await getMarketSummary(market);
+  const lowestRate = res[0].Low;
   await Promise.all(
     // eslint-disable-next-line prefer-spread
     Array.apply(null, new Array(CHUNK_COUNT)).map(function() {
       buyChunk({
         market,
         chunkSourceAmount,
-        initialRate: latestRate,
+        initialRate: lowestRate,
         sourceCurrency,
         targetCurrency,
       });
