@@ -2,11 +2,10 @@
 global.Promise = require("bluebird");
 const inquirer = require("inquirer");
 
-const { getMarketTicker, getOrderBook } = require("./src/ApiPublic");
-const { getAccountBalance, getAccountOrder } = require("./src/ApiAccount");
+const { getAccountOrder } = require("./src/ApiAccount");
 const { makeSellOrder } = require("./src/ApiMarket");
 const { CURRENCY_BITCOIN } = require("./src/constants");
-const { logInfo, logSuccess, logError, sleep } = require("./src/utils");
+const { logError } = require("./src/utils");
 
 async function trySell(market) {
   try {
@@ -17,7 +16,7 @@ async function trySell(market) {
       rate: 0.1,
     });
   } catch (err) {
-    console.log(err);
+    logError(err);
     console.timeEnd("SELL");
   }
 }

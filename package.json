@@ -9,8 +9,9 @@
     "format": "prettier --trailing-comma es5 --write '{src}/**/*.js'",
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "precommit": "lint-staged",
-    "buy": "node buy.js",
-    "test": "node test.js"
+    "buy": "node index.js",
+    "test-bittrex": "node tests/bittrex.js",
+    "test-telegram": "node tests/telegram.js"
   },
   "lint-staged": {
     "*.js": [
