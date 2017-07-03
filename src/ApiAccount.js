@@ -9,9 +9,10 @@ const { logError } = require("./utils");
 const { get } = require("./request");
 
 /**
- * [getAccountBalance description]
- * @param {[type]} currency [description]
- * @return {[type]} [description]
+ * 
+ * 
+ * @param {any} currency 
+ * @returns 
  */
 function getAccountBalance(currency) {
   const url = `${GET_BALANCE_URL}?apikey=${API_KEY}&nonce=${getNonce()}&currency=${currency}`;
@@ -35,6 +36,12 @@ function getAccountBalance(currency) {
     });
 }
 
+/**
+ * 
+ * 
+ * @param {any} orderId 
+ * @returns 
+ */
 function getAccountOrder(orderId) {
   const url = `${GET_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
 
@@ -55,6 +62,12 @@ function getAccountOrder(orderId) {
     });
 }
 
+/**
+ * 
+ * 
+ * @param {any} market 
+ * @returns 
+ */
 function getAccountOrdersHistory(market) {
   const url = `${GET_ORDERS_HISTORY_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}`;
 

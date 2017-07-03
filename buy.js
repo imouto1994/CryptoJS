@@ -24,22 +24,13 @@ const {
 } = require("./src/utils");
 
 /**
- * [sellChunk description]
- * @param  {[type]} options.market            [description]
- * @param  {[type]} options.chunkTargetAmount [description]
- * @param  {[type]} options.baseRate          [description]
- * @param  {[type]} options.sourceCurrency    [description]
- * @param  {[type]} options.targetCurrency    [description]
- * @param  {[type]} options.                  [description]
- * @return {[type]}                           [description]
+ * 
+ * 
+ * @param {any} params 
  */
-async function sellChunk({
-  market,
-  chunkTargetAmount,
-  baseRate,
-  sourceCurrency,
-  targetCurrency,
-}) {
+async function sellChunk(params) {
+  const { market, chunkTargetAmount, baseRate, targetCurrency } = params;
+
   for (let i = 0; i < 5; i++) {
     // Calculate rate
     let rate;
@@ -145,14 +136,13 @@ async function sellChunk({
 }
 
 /**
- * [trackCloseOrder description]
- * @param  {[type]} options.orderId        [description]
- * @param  {[type]} options.quantity       [description]
- * @param  {[type]} options.rate           [description]
- * @param  {[type]} options.targetCurrency [description]
- * @return {[type]}                        [description]
+ * 
+ * 
+ * @param {any} params 
  */
-async function trackCloseOrder({ orderId, quantity, rate, targetCurrency }) {
+async function trackCloseOrder(params) {
+  const { orderId, quantity, rate, targetCurrency } = params;
+
   let remainingQuantity = quantity;
   let isOrderClosed = false;
   for (let j = 0; j < 35; j++) {
@@ -200,22 +190,19 @@ async function trackCloseOrder({ orderId, quantity, rate, targetCurrency }) {
 }
 
 /**
- * [buyChunk description]
- * @param  {[type]} options.market            [description]
- * @param  {[type]} options.chunkSourceAmount [description]
- * @param  {[type]} options.initialRate       [description]
- * @param  {[type]} options.sourceCurrency    [description]
- * @param  {[type]} options.targetCurrency    [description]
- * @param  {[type]} options.                  [description]
- * @return {[type]}                           [description]
+ * 
+ * 
+ * @param {any} params 
  */
-async function buyChunk({
-  market,
-  chunkSourceAmount,
-  initialRate,
-  sourceCurrency,
-  targetCurrency,
-}) {
+async function buyChunk(params) {
+  const {
+    market,
+    chunkSourceAmount,
+    initialRate,
+    sourceCurrency,
+    targetCurrency,
+  } = params;
+
   const actualAmount = floor(
     chunkSourceAmount / (1 + COMMISION_RATE),
     CURRENCY_PRECISION
@@ -255,8 +242,9 @@ async function buyChunk({
 }
 
 /**
- * Run buy bot to buy as much amount of target currency as possible with the given amount of source currency
- * @return {[type]} [description]
+ * 
+ * 
+ * @returns 
  */
 async function runBot() {
   // Define source currency

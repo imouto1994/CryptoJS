@@ -3,9 +3,10 @@ const { logError } = require("./utils");
 const { get } = require("./request");
 
 /**
- * [getMarketTicker description]
- * @param {String} market
- * @return {Promise}
+ * 
+ * 
+ * @param {any} market 
+ * @returns 
  */
 function getMarketTicker(market) {
   const url = `${GET_MARKET_TICKER_URL}?market=${market}`;
@@ -27,13 +28,13 @@ function getMarketTicker(market) {
 }
 
 /**
- * [getOrderBook description]
- * @param {[type]} market [description]
- * @param {String} type [description]
- * @param {Number} depth [description]
- * @return {[type]} [description]
+ * 
+ * 
+ * @param {any} params 
+ * @returns 
  */
-function getOrderBook({ market, type = "both", depth = 20 }) {
+function getOrderBook(params) {
+  const { market, type = "both", depth = 20 } = params;
   const url = `${GET_ORDER_BOOK_URL}?market=${market}&type=${type}&depth=${depth}`;
 
   return get(url, { json: true })

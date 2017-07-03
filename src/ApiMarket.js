@@ -10,13 +10,13 @@ const { logError } = require("./utils");
 const { get } = require("./request");
 
 /**
- * [makeBuyOrder description]
- * @param {[type]} market [description]
- * @param {[type]} quantity [description]
- * @param {[type]} rate [description]
- * @return {[type]} [description]
+ * 
+ * 
+ * @param {any} params 
+ * @returns 
  */
-function makeBuyOrder({ market, quantity, rate }) {
+function makeBuyOrder(params) {
+  const { market, quantity, rate } = params;
   const url = `${BUY_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
   return get(url, { json: true, headers: { apisign: getApiSign(url) } })
@@ -39,13 +39,13 @@ function makeBuyOrder({ market, quantity, rate }) {
 }
 
 /**
- * [makeSellOrder description]
- * @param {[type]} market [description]
- * @param {[type]} quantity [description]
- * @param {[type]} rate [description]
- * @return {[type]} [description]
+ * 
+ * 
+ * @param {any} params 
+ * @returns 
  */
-function makeSellOrder({ market, quantity, rate }) {
+function makeSellOrder(params) {
+  const { market, quantity, rate } = params;
   const url = `${SELL_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
   return get(url, { json: true, headers: { apisign: getApiSign(url) } })
@@ -68,9 +68,10 @@ function makeSellOrder({ market, quantity, rate }) {
 }
 
 /**
- * [cancelOrder description]
- * @param {[type]} orderId [description]
- * @return {[type]} [description]
+ * 
+ * 
+ * @param {any} orderId 
+ * @returns 
  */
 function cancelOrder(orderId) {
   const url = `${CANCEL_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
@@ -93,9 +94,10 @@ function cancelOrder(orderId) {
 }
 
 /**
- * [getOpenOrders description]
- * @param {[type]} market [description]
- * @return {[type]} [description]
+ * 
+ * 
+ * @param {any} market 
+ * @returns 
  */
 function getOpenOrders(market) {
   const url = `${GET_OPEN_ORDERS_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}`;
