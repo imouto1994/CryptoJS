@@ -2,10 +2,10 @@
 global.Promise = require("bluebird");
 const inquirer = require("inquirer");
 
-const { getAccountOrder } = require("./src/ApiAccount");
-const { makeSellOrder } = require("./src/ApiMarket");
-const { CURRENCY_BITCOIN } = require("./src/constants");
-const { logError } = require("./src/utils");
+const { getAccountOrder } = require("../src/ApiAccount");
+const { makeSellOrder } = require("../src/ApiMarket");
+const { CURRENCY_BITCOIN } = require("../src/constants");
+const { logError } = require("../src/utils");
 
 async function trySell(market) {
   try {
