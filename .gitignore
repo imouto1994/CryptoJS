@@ -6,3 +6,6 @@ src/config.js
 
 # Virtual Env
 venv
+
+# Visual Codes
+.vscode/settings.json
