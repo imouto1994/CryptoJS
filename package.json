@@ -9,15 +9,12 @@
     "format": "prettier --trailing-comma es5 --write '{src}/**/*.js'",
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "precommit": "lint-staged",
-    "buy": "node index.js",
+    "buy": "node buy.js",
     "test-bittrex": "node tests/bittrex.js",
     "test-telegram": "node tests/telegram.js"
   },
   "lint-staged": {
-    "*.js": [
-      "prettier --write --trailing-comma es5",
-      "git add"
-    ]
+    "*.js": ["prettier --write --trailing-comma es5", "git add"]
   },
   "dependencies": {
     "agentkeepalive": "3.3.0",

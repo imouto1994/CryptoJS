@@ -16,6 +16,7 @@ const {
   SELL_RATE,
 } = require("./src/constants");
 const {
+  sleep,
   isEqual,
   logInfo,
   logWarning,
