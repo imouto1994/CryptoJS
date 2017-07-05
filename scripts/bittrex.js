@@ -1,5 +1,6 @@
 // Polyfill Promise with Bluebird Promise
 global.Promise = require("bluebird");
+
 const inquirer = require("inquirer");
 const floor = require("lodash/floor");
 
@@ -32,9 +33,9 @@ const {
 } = require("../src/utils");
 
 /**
- * 
- * 
- * @param {any} params 
+ *
+ *
+ * @param {any} params
  */
 async function sellChunk(params) {
   const { market, chunkTargetAmount, baseRate, targetCurrency } = params;
@@ -126,9 +127,9 @@ async function sellChunk(params) {
 }
 
 /**
- * 
- * 
- * @param {any} params 
+ *
+ *
+ * @param {any} params
  */
 async function trackCloseOrder(params) {
   const { orderId, quantity, baseRate, rate, targetCurrency, market } = params;
@@ -190,9 +191,9 @@ async function trackCloseOrder(params) {
 }
 
 /**
- * 
- * 
- * @param {any} params 
+ *
+ *
+ * @param {any} params
  */
 async function buyChunk(params) {
   const {
@@ -235,9 +236,9 @@ async function buyChunk(params) {
 }
 
 /**
- * 
- * 
- * @returns 
+ *
+ *
+ * @returns
  */
 async function runBot() {
   // Define source currency

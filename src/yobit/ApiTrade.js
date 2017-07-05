@@ -20,7 +20,7 @@ function makeTradeOrder({ market, type, rate, amount }) {
     amount,
   };
 
-  post(YOBIT_TRADE_API_URL, {
+  return post(YOBIT_TRADE_API_URL, {
     json: true,
     form: true,
     body,
@@ -63,7 +63,7 @@ function getOrderInfo(orderId) {
     order_id: orderId,
   };
 
-  post(YOBIT_TRADE_API_URL, {
+  return post(YOBIT_TRADE_API_URL, {
     json: true,
     form: true,
     body,
@@ -106,7 +106,7 @@ function cancelOrder(orderId) {
     order_id: orderId,
   };
 
-  post(YOBIT_TRADE_API_URL, {
+  return post(YOBIT_TRADE_API_URL, {
     json: true,
     form: true,
     body,
@@ -147,13 +147,13 @@ function getAccountInfo() {
     method: "getInfo",
   };
 
-  post(YOBIT_TRADE_API_URL, {
+  return post(YOBIT_TRADE_API_URL, {
     json: true,
     form: true,
     body,
     headers: {
       Key: YOBIT_API_KEY,
-      Sign: getYobitApiSign(`method=${body.method}&nonce=${body.nonce}`),
+      Sign: getYobitApiSign(`nonce=${body.nonce}&method=${body.method}`),
     },
   })
     .then(function(res) {

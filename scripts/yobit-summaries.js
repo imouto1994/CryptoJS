@@ -1,9 +1,7 @@
 // Polyfill Promise with Bluebird Promise
 global.Promise = require("bluebird");
 
-const Deque = require("double-ended-queue");
 const winston = require("winston");
-const forEach = require("lodash/forEach");
 const chunk = require("lodash/chunk");
 
 const { getExchangeInfo, getMarketTickers } = require("../src/yobit/ApiPublic");

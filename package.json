@@ -12,6 +12,7 @@
     "bittrex": "node scripts/bittrex.js",
     "bittrex-track": "node scripts/bittrex-track.js",
     "bittrex-summaries": "node scripts/bittrex-summaries.js",
+    "yobit": "node scripts/yobit.js",
     "yobit-track": "node scripts/yobit-track.js",
     "yobit-summaries": "node scripts/yobit-summaries.js"
   },
