@@ -41,11 +41,6 @@ const logger = new winston.Logger({
 function createMarketLogger(market) {
   return new winston.Logger({
     transports: [
-      new winston.transports.Console({
-        timestamp() {
-          return new Date().toLocaleString();
-        },
-      }),
       new winston.transports.File({
         filename: `logs/yobit-track-market-${market}-${new Date().toLocaleString()}.log`,
         json: false,
@@ -60,25 +55,27 @@ function createMarketLogger(market) {
 async function trackMarketOrders(market) {
   const marketLogger = createMarketLogger(market);
 
+  const startTime = Date.now();
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const [marketTrades, marketDepth] = await Promise.all([
-      getMarketTrades([market]),
-      getMarketDepths([market]),
+      getMarketTrades([market], 300),
+      getMarketDepths([market], 600),
     ]);
-    marketLogger.logInfo(
+    marketLogger.info(
       `Market Trades:\n${JSON.stringify(marketTrades, null, 2)}`
     );
-    marketLogger.logInfo(
-      `Market Depth:\n${JSON.stringify(marketDepth, null, 2)}`
-    );
+    marketLogger.info(`Market Depth:\n${JSON.stringify(marketDepth, null, 2)}`);
     await sleep(1500);
+    if (Date.now() - startTime > 300000) {
+      break;
+    }
   }
 }
 
 async function trackMarketTickers(marketGroup, index) {
   const potentialMarkets = {};
-  const rate = 1.5;
+  const rate = 1.4;
   const dequeMaxLength = 5;
   logger.info(
     `Start tracking with rate ${rate} and deque length at ${dequeMaxLength} for group ${index}`
@@ -93,31 +90,32 @@ async function trackMarketTickers(marketGroup, index) {
     // Condition Checking
     const length = deque.length;
     forEach(tickersMap, (ticker, market) => {
-      for (let i = 0; i < length; i++) {
-        const oldTicker = deque.get(i)[market];
-        if (oldTicker != null) {
-          if (
-            ticker.last > oldTicker.lastWithRate ||
-            ticker.buy > oldTicker.buyWithRate ||
-            ticker.sell > oldTicker.sellWithRate
-          ) {
-            logger.info(
-              `Iteration ${iteration} - Group Index: ${index} - Index: ${i}\n` +
-                JSON.stringify(ticker, null, 2) +
-                "\n" +
-                JSON.stringify(oldTicker, null, 2)
-            );
-            logger.info(`NEW POTENTIAL MARKET: ${market}`);
+      if (potentialMarkets[market] == null) {
+        for (let i = 0; i < length; i++) {
+          const oldTicker = deque.get(i)[market];
+          if (oldTicker != null) {
+            if (
+              ticker.last > oldTicker.lastWithRate ||
+              ticker.buy > oldTicker.buyWithRate ||
+              ticker.sell > oldTicker.sellWithRate
+            ) {
+              logger.info(
+                `Iteration ${iteration} - Group Index: ${index} - Index: ${i}\n` +
+                  JSON.stringify(ticker, null, 2) +
+                  "\n" +
+                  JSON.stringify(oldTicker, null, 2)
+              );
+              logger.info(`NEW POTENTIAL MARKET: ${market}`);
 
-            // Track orders for new potential market
-            if (potentialMarkets[market] == null) {
+              // Track orders for new potential market
               potentialMarkets[market] = true;
               trackMarketOrders(market);
               setTimeout(() => {
                 delete potentialMarkets[market];
-              }, 30000);
+              }, 300000);
+
+              break;
             }
-            break;
           }
         }
       }
@@ -134,11 +132,11 @@ async function trackMarketTickers(marketGroup, index) {
     }
 
     // Mark Iteration
-    if (++iteration % 500 === 0) {
+    if (++iteration % 10 === 0) {
       logger.info(`Group Index ${index} - Iteration ${iteration}`);
     }
 
-    await sleep(1000);
+    await sleep(1500);
   }
 }
 

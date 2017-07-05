@@ -33,9 +33,11 @@ function getExchangeInfo() {
  * @param {any} markets 
  * @returns 
  */
-function getMarketDepths(markets) {
+function getMarketDepths(markets, limit = 150) {
   const url =
-    YOBIT_GET_MARKET_DEPTH_URL + markets.join("-") + "?ignore_invalid=1";
+    YOBIT_GET_MARKET_DEPTH_URL +
+    markets.join("-") +
+    `?ignore_invalid=1&limit=${limit}`;
   return get(url, { json: true })
     .then(function(res) {
       const { body } = res;
@@ -77,9 +79,11 @@ function getMarketTickers(markets) {
  * @param {any} markets 
  * @returns 
  */
-function getMarketTrades(markets) {
+function getMarketTrades(markets, limit = 150) {
   const url =
-    YOBIT_GET_MARKET_TRADES_URL + markets.join("-") + "?ignore_invalid=1";
+    YOBIT_GET_MARKET_TRADES_URL +
+    markets.join("-") +
+    `?ignore_invalid=1&limit=${limit}`;
   return get(url, { json: true })
     .then(function(res) {
       const { body } = res;
