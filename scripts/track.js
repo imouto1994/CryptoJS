@@ -15,7 +15,7 @@ const logger = new winston.Logger({
       },
     }),
     new winston.transports.File({
-      filename: "logs/track.log",
+      filename: `logs/track-${new Date().toLocaleString()}.log`,
       json: false,
       timestamp() {
         return new Date().toLocaleString();
@@ -26,9 +26,12 @@ const logger = new winston.Logger({
 });
 
 async function main() {
-  logger.info("Start tracking...");
+  const rate = 1.025;
+  const dequeMaxLength = 20;
+  logger.info(
+    `Start tracking with rate ${rate} and deque length at ${dequeMaxLength}`
+  );
 
-  const rate = 1.05;
   let iteration = 0;
   const deque = new Deque();
   // eslint-disable-next-line no-constant-condition
@@ -72,7 +75,7 @@ async function main() {
 
     // Update Deque
     deque.push(summariesMap);
-    if (length === 20) {
+    if (length === dequeMaxLength) {
       deque.shift();
     }
 
