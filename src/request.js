@@ -14,6 +14,11 @@ function get(url, options) {
   return got(url, Object.assign({}, { agent: KeepAliveAgent }, options));
 }
 
+function post(url, options) {
+  return got.post(url, Object.assign({}, { agent: KeepAliveAgent }, options));
+}
+
 module.exports = {
   get,
+  post,
 };

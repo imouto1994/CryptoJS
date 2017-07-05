@@ -1,8 +1,9 @@
 // Polyfill Promise with Bluebird Promise
 global.Promise = require("bluebird");
+
 const winston = require("winston");
 
-const { getMarketSummaries } = require("../src/ApiPublic");
+const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
 const { sleep } = require("../src/utils");
 
 const logger = new winston.Logger({
@@ -13,7 +14,7 @@ const logger = new winston.Logger({
       },
     }),
     new winston.transports.File({
-      filename: "logs/summaries.log",
+      filename: `logs/bittrex-summaries-${new Date().toLocaleString()}.log`,
       json: false,
       timestamp() {
         return new Date().toLocaleString();
@@ -24,7 +25,7 @@ const logger = new winston.Logger({
 });
 
 async function main() {
-  logger.info("Start logging summaries...");
+  logger.info("Start logging summaries for Bittrex...");
 
   // eslint-disable-next-line no-constant-condition
   while (true) {

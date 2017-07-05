@@ -1,13 +1,13 @@
 const {
-  API_KEY,
-  BUY_LIMIT_ORDER_URL,
-  SELL_LIMIT_ORDER_URL,
-  CANCEL_ORDER_URL,
-  GET_OPEN_ORDERS_URL,
-} = require("./constants");
-const { getApiSign, getNonce } = require("./auth");
-const { logError } = require("./utils");
-const { get } = require("./request");
+  BITTREX_API_KEY,
+  BITTREX_BUY_LIMIT_ORDER_URL,
+  BITTREX_SELL_LIMIT_ORDER_URL,
+  BITTREX_CANCEL_ORDER_URL,
+  BITTREX_GET_OPEN_ORDERS_URL,
+} = require("../constants");
+const { getBittrexApiSign, getNonce } = require("../auth");
+const { logError } = require("../utils");
+const { get } = require("../request");
 
 /**
  * 
@@ -17,9 +17,9 @@ const { get } = require("./request");
  */
 function makeBuyOrder(params) {
   const { market, quantity, rate } = params;
-  const url = `${BUY_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
+  const url = `${BITTREX_BUY_LIMIT_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
-  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
+  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -46,9 +46,9 @@ function makeBuyOrder(params) {
  */
 function makeSellOrder(params) {
   const { market, quantity, rate } = params;
-  const url = `${SELL_LIMIT_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
+  const url = `${BITTREX_SELL_LIMIT_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
-  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
+  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -74,9 +74,9 @@ function makeSellOrder(params) {
  * @returns 
  */
 function cancelOrder(orderId) {
-  const url = `${CANCEL_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
+  const url = `${BITTREX_CANCEL_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
 
-  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
+  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -100,9 +100,9 @@ function cancelOrder(orderId) {
  * @returns 
  */
 function getOpenOrders(market) {
-  const url = `${GET_OPEN_ORDERS_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}`;
+  const url = `${BITTREX_GET_OPEN_ORDERS_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}`;
 
-  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
+  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {

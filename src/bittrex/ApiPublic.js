@@ -1,11 +1,11 @@
 const {
-  GET_MARKET_TICKER_URL,
-  GET_ORDER_BOOK_URL,
-  GET_MARKET_SUMMARY_URL,
-  GET_MARKET_SUMMARIES_URL,
-} = require("./constants");
-const { logError } = require("./utils");
-const { get } = require("./request");
+  BITTREX_GET_MARKET_TICKER_URL,
+  BITTREX_GET_ORDER_BOOK_URL,
+  BITTREX_GET_MARKET_SUMMARY_URL,
+  BITTREX_GET_MARKET_SUMMARIES_URL,
+} = require("../constants");
+const { logError } = require("../utils");
+const { get } = require("../request");
 
 /**
  * 
@@ -14,7 +14,7 @@ const { get } = require("./request");
  * @returns 
  */
 function getMarketTicker(market) {
-  const url = `${GET_MARKET_TICKER_URL}?market=${market}`;
+  const url = `${BITTREX_GET_MARKET_TICKER_URL}?market=${market}`;
   return get(url, { json: true })
     .then(function(res) {
       const { body } = res;
@@ -40,7 +40,7 @@ function getMarketTicker(market) {
  */
 function getOrderBook(params) {
   const { market, type = "both", depth = 20 } = params;
-  const url = `${GET_ORDER_BOOK_URL}?market=${market}&type=${type}&depth=${depth}`;
+  const url = `${BITTREX_GET_ORDER_BOOK_URL}?market=${market}&type=${type}&depth=${depth}`;
 
   return get(url, { json: true })
     .then(function(res) {
@@ -62,7 +62,7 @@ function getOrderBook(params) {
 }
 
 function getMarketSummary(market) {
-  const url = `${GET_MARKET_SUMMARY_URL}?market=${market}`;
+  const url = `${BITTREX_GET_MARKET_SUMMARY_URL}?market=${market}`;
   return get(url, { json: true })
     .then(function(res) {
       const { body } = res;
@@ -81,7 +81,7 @@ function getMarketSummary(market) {
 }
 
 function getMarketSummaries() {
-  const url = GET_MARKET_SUMMARIES_URL;
+  const url = BITTREX_GET_MARKET_SUMMARIES_URL;
   return get(url, { json: true })
     .then(function(res) {
       const { body } = res;

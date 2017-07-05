@@ -1,10 +1,11 @@
 // Polyfill Promise with Bluebird Promise
 global.Promise = require("bluebird");
+
 const forEach = require("lodash/forEach");
 const Deque = require("double-ended-queue");
 const winston = require("winston");
 
-const { getMarketSummaries } = require("../src/ApiPublic");
+const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
 const { sleep } = require("../src/utils");
 
 const logger = new winston.Logger({
@@ -15,7 +16,7 @@ const logger = new winston.Logger({
       },
     }),
     new winston.transports.File({
-      filename: `logs/track-${new Date().toLocaleString()}.log`,
+      filename: `logs/bittrex-track-${new Date().toLocaleString()}.log`,
       json: false,
       timestamp() {
         return new Date().toLocaleString();
@@ -26,8 +27,8 @@ const logger = new winston.Logger({
 });
 
 async function main() {
-  const rate = 1.025;
-  const dequeMaxLength = 20;
+  const rate = 1.15;
+  const dequeMaxLength = 5;
   logger.info(
     `Start tracking with rate ${rate} and deque length at ${dequeMaxLength}`
   );
@@ -50,12 +51,12 @@ async function main() {
     const length = deque.length;
     forEach(summariesMap, (summary, market) => {
       for (let i = 0; i < length; i++) {
-        const oldSummary = deque.get(i);
+        const oldSummary = deque.get(i)[market];
         if (oldSummary != null) {
           if (
-            summary.Last > oldSummary.Last ||
-            summary.Bid > oldSummary.Bid ||
-            summary.Ask > oldSummary.Ask
+            summary.Last > oldSummary.LastWithRate ||
+            summary.Bid > oldSummary.BidWithRate ||
+            summary.Ask > oldSummary.AskWithRate
           ) {
             logger.info(
               `Iteration ${iteration} - Index: ${i}\n` +
@@ -63,14 +64,15 @@ async function main() {
                 "\n" +
                 JSON.stringify(oldSummary, null, 2)
             );
+            logger.info(`POTENTIAL MARKET: ${market}`);
             break;
           }
         }
       }
 
-      summary.Last = summary.Last * rate;
-      summary.Bid = summary.Bid * rate;
-      summary.Ask = summary.Ask * rate;
+      summary.LastWithRate = summary.Last * rate;
+      summary.BidWithRate = summary.Bid * rate;
+      summary.AskWithRate = summary.Ask * rate;
     });
 
     // Update Deque

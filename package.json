@@ -5,12 +5,15 @@
   "author": "Trong Nhan <imouto1994@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "lint": "eslint src index.js",
-    "format": "prettier --trailing-comma es5 --write '{src}/**/*.js'",
+    "lint": "eslint src scripts",
+    "format": "prettier --trailing-comma es5 --write '{src|scripts}/**/*.js'",
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "precommit": "lint-staged",
-    "buy": "node buy.js",
-    "track": "node scripts/track.js"
+    "bittrex": "node scripts/bittrex.js",
+    "bittrex-track": "node scripts/bittrex-track.js",
+    "bittrex-summaries": "node scripts/bittrex-summaries.js",
+    "yobit-track": "node scripts/yobit-track.js",
+    "yobit-summaries": "node scripts/yobit-summaries.js"
   },
   "lint-staged": {
     "*.js": ["prettier --write --trailing-comma es5", "git add"]

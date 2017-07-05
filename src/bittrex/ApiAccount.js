@@ -1,12 +1,12 @@
 const {
-  API_KEY,
-  GET_BALANCE_URL,
-  GET_ORDER_URL,
-  GET_ORDERS_HISTORY_URL,
-} = require("./constants");
-const { getApiSign, getNonce } = require("./auth");
-const { logError } = require("./utils");
-const { get } = require("./request");
+  BITTREX_API_KEY,
+  BITTREX_GET_BALANCE_URL,
+  BITTREX_GET_ORDER_URL,
+  BITTREX_GET_ORDERS_HISTORY_URL,
+} = require("../constants");
+const { getBittrexApiSign, getNonce } = require("../auth");
+const { logError } = require("../utils");
+const { get } = require("../request");
 
 /**
  * 
@@ -15,9 +15,9 @@ const { get } = require("./request");
  * @returns 
  */
 function getAccountBalance(currency) {
-  const url = `${GET_BALANCE_URL}?apikey=${API_KEY}&nonce=${getNonce()}&currency=${currency}`;
+  const url = `${BITTREX_GET_BALANCE_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&currency=${currency}`;
 
-  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
+  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -43,9 +43,9 @@ function getAccountBalance(currency) {
  * @returns 
  */
 function getAccountOrder(orderId) {
-  const url = `${GET_ORDER_URL}?apikey=${API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
+  const url = `${BITTREX_GET_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
 
-  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
+  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {
@@ -69,9 +69,9 @@ function getAccountOrder(orderId) {
  * @returns 
  */
 function getAccountOrdersHistory(market) {
-  const url = `${GET_ORDERS_HISTORY_URL}?apikey=${API_KEY}&nonce=${getNonce()}&market=${market}`;
+  const url = `${BITTREX_GET_ORDERS_HISTORY_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}`;
 
-  return get(url, { json: true, headers: { apisign: getApiSign(url) } })
+  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
     .then(function(res) {
       const { body } = res;
       if (body.success) {

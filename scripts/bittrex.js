@@ -3,18 +3,25 @@ global.Promise = require("bluebird");
 const inquirer = require("inquirer");
 const floor = require("lodash/floor");
 
-const { getMarketTicker, getMarketSummary } = require("./src/ApiPublic");
-const { getAccountBalance, getAccountOrder } = require("./src/ApiAccount");
-const { makeBuyOrder, makeSellOrder, cancelOrder } = require("./src/ApiMarket");
+const { getMarketTicker } = require("../src/bittrex/ApiPublic");
+const {
+  getAccountBalance,
+  getAccountOrder,
+} = require("../src/bittrex/ApiAccount");
+const {
+  makeBuyOrder,
+  makeSellOrder,
+  cancelOrder,
+} = require("../src/bittrex/ApiMarket");
 const {
   CURRENCY_BITCOIN,
   CURRENCY_PRECISION,
   CHUNK_COUNT,
-  COMMISION_RATE,
+  BITTREX_COMMISSION_RATE,
   EXCHANGE_RATE_STEP,
   BUY_RATE,
   SELL_RATE,
-} = require("./src/constants");
+} = require("../src/constants");
 const {
   sleep,
   isEqual,
@@ -22,7 +29,7 @@ const {
   logWarning,
   logError,
   logSuccess,
-} = require("./src/utils");
+} = require("../src/utils");
 
 /**
  * 
@@ -197,7 +204,7 @@ async function buyChunk(params) {
   } = params;
 
   const actualAmount = floor(
-    chunkSourceAmount / (1 + COMMISION_RATE),
+    chunkSourceAmount / (1 + BITTREX_COMMISSION_RATE),
     CURRENCY_PRECISION
   );
   logInfo(

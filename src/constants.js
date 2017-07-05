@@ -1,3 +1,4 @@
+// Fetch private configurations
 let config;
 try {
   config = require("./config");
@@ -6,50 +7,78 @@ try {
   config = {};
 }
 
-const { API_KEY, API_SECRET } = config;
+const {
+  BITTREX_API_KEY,
+  BITTREX_API_SECRET,
+  YOBIT_API_KEY,
+  YOBIT_API_SECRET,
+} = config;
 
-const API_URL = "https://bittrex.com/api/v1.1";
+// Bittrex URLs
+const BITTREX_API_URL = "https://bittrex.com/api/v1.1";
 
-const GET_MARKET_TICKER_URL = `${API_URL}/public/getticker/`;
-const GET_ORDER_BOOK_URL = `${API_URL}/public/getorderbook/`;
-const GET_MARKET_SUMMARY_URL = `${API_URL}/public/getmarketsummary/`;
-const GET_MARKET_SUMMARIES_URL = `${API_URL}/public/getmarketsummaries/`;
+const BITTREX_GET_MARKET_TICKER_URL = `${BITTREX_API_URL}/public/getticker/`;
+const BITTREX_GET_ORDER_BOOK_URL = `${BITTREX_API_URL}/public/getorderbook/`;
+const BITTREX_GET_MARKET_SUMMARY_URL = `${BITTREX_API_URL}/public/getmarketsummary/`;
+const BITTREX_GET_MARKET_SUMMARIES_URL = `${BITTREX_API_URL}/public/getmarketsummaries/`;
 
-const GET_BALANCE_URL = `${API_URL}/account/getbalance/`;
-const GET_ORDER_URL = `${API_URL}/account/getorder/`;
-const GET_ORDERS_HISTORY_URL = `${API_URL}/account/getorderhistory/`;
+const BITTREX_GET_BALANCE_URL = `${BITTREX_API_URL}/account/getbalance/`;
+const BITTREX_GET_ORDER_URL = `${BITTREX_API_URL}/account/getorder/`;
+const BITTREX_GET_ORDERS_HISTORY_URL = `${BITTREX_API_URL}/account/getorderhistory/`;
 
-const BUY_LIMIT_ORDER_URL = `${API_URL}/market/buylimit/`;
-const SELL_LIMIT_ORDER_URL = `${API_URL}/market/selllimit/`;
-const CANCEL_ORDER_URL = `${API_URL}/market/cancel/`;
-const GET_OPEN_ORDERS_URL = `${API_URL}/market/getopenorders/`;
+const BITTREX_BUY_LIMIT_ORDER_URL = `${BITTREX_API_URL}/market/buylimit/`;
+const BITTREX_SELL_LIMIT_ORDER_URL = `${BITTREX_API_URL}/market/selllimit/`;
+const BITTREX_CANCEL_ORDER_URL = `${BITTREX_API_URL}/market/cancel/`;
+const BITTREX_GET_OPEN_ORDERS_URL = `${BITTREX_API_URL}/market/getopenorders/`;
+
+// Yobit URLs
+const YOBIT_PUBLIC_API_URL = "https://yobit.net/api";
+const YOBIT_TRADE_API_URL = "https://yobit.net/tapi";
+
+const YOBIT_GET_MARKET_DEPTH_URL = `${YOBIT_PUBLIC_API_URL}/3/depth/`;
+const YOBIT_GET_MARKET_TICKER_URL = `${YOBIT_PUBLIC_API_URL}/3/ticker/`;
+const YOBIT_GET_MARKET_TRADES_URL = `${YOBIT_PUBLIC_API_URL}/3/trades/`;
+const YOBIT_GET_EXCHANGE_INFO = `${YOBIT_PUBLIC_API_URL}/3/info/`;
 
 module.exports = {
-  // API Keys & Secrets
-  API_KEY,
-  API_SECRET,
+  // Bittrex API Keys
+  BITTREX_API_KEY,
+  BITTREX_API_SECRET,
 
-  // API URLs
-  API_URL,
+  // Yobit API Keys
+  YOBIT_API_KEY,
+  YOBIT_API_SECRET,
 
-  GET_MARKET_TICKER_URL,
-  GET_ORDER_BOOK_URL,
-  GET_MARKET_SUMMARY_URL,
-  GET_MARKET_SUMMARIES_URL,
+  // Bittrex URLs
+  BITTREX_API_URL,
 
-  GET_BALANCE_URL,
-  GET_ORDER_URL,
-  GET_ORDERS_HISTORY_URL,
+  BITTREX_GET_MARKET_TICKER_URL,
+  BITTREX_GET_ORDER_BOOK_URL,
+  BITTREX_GET_MARKET_SUMMARY_URL,
+  BITTREX_GET_MARKET_SUMMARIES_URL,
 
-  BUY_LIMIT_ORDER_URL,
-  SELL_LIMIT_ORDER_URL,
-  CANCEL_ORDER_URL,
-  GET_OPEN_ORDERS_URL,
+  BITTREX_GET_BALANCE_URL,
+  BITTREX_GET_ORDER_URL,
+  BITTREX_GET_ORDERS_HISTORY_URL,
+
+  BITTREX_BUY_LIMIT_ORDER_URL,
+  BITTREX_SELL_LIMIT_ORDER_URL,
+  BITTREX_CANCEL_ORDER_URL,
+  BITTREX_GET_OPEN_ORDERS_URL,
+
+  // Yobit URLs
+  YOBIT_GET_MARKET_DEPTH_URL,
+  YOBIT_GET_MARKET_TICKER_URL,
+  YOBIT_GET_MARKET_TRADES_URL,
+  YOBIT_GET_EXCHANGE_INFO,
+
+  YOBIT_TRADE_API_URL,
 
   // Market Constants
   CURRENCY_BITCOIN: "BTC",
   CURRENCY_PRECISION: 8,
-  COMMISION_RATE: 0.0025,
+  BITTREX_COMMISSION_RATE: 0.0025,
+  YOBIT_COMMISSION_RATE: 0.002,
   CHUNK_COUNT: 1,
   BUY_RATE: 1.5,
   SELL_RATE: 3.0,
