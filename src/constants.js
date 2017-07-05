@@ -13,6 +13,7 @@ const API_URL = "https://bittrex.com/api/v1.1";
 const GET_MARKET_TICKER_URL = `${API_URL}/public/getticker/`;
 const GET_ORDER_BOOK_URL = `${API_URL}/public/getorderbook/`;
 const GET_MARKET_SUMMARY_URL = `${API_URL}/public/getmarketsummary/`;
+const GET_MARKET_SUMMARIES_URL = `${API_URL}/public/getmarketsummaries/`;
 
 const GET_BALANCE_URL = `${API_URL}/account/getbalance/`;
 const GET_ORDER_URL = `${API_URL}/account/getorder/`;
@@ -34,6 +35,7 @@ module.exports = {
   GET_MARKET_TICKER_URL,
   GET_ORDER_BOOK_URL,
   GET_MARKET_SUMMARY_URL,
+  GET_MARKET_SUMMARIES_URL,
 
   GET_BALANCE_URL,
   GET_ORDER_URL,
@@ -48,9 +50,9 @@ module.exports = {
   CURRENCY_BITCOIN: "BTC",
   CURRENCY_PRECISION: 8,
   COMMISION_RATE: 0.0025,
-  CHUNK_COUNT: 3,
-  BUY_RATE: 2,
-  SELL_RATE: 5,
+  CHUNK_COUNT: 1,
+  BUY_RATE: 1.5,
+  SELL_RATE: 3.0,
   EXCHANGE_RATE_STEP: 0.1,
   EPSILON: 0.0000000001,
 };

@@ -9,3 +9,6 @@ venv
 
 # Visual Codes
 .vscode/settings.json
+
+# Logs
+logs

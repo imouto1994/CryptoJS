@@ -2,6 +2,7 @@ const {
   GET_MARKET_TICKER_URL,
   GET_ORDER_BOOK_URL,
   GET_MARKET_SUMMARY_URL,
+  GET_MARKET_SUMMARIES_URL,
 } = require("./constants");
 const { logError } = require("./utils");
 const { get } = require("./request");
@@ -79,8 +80,28 @@ function getMarketSummary(market) {
     });
 }
 
+function getMarketSummaries() {
+  const url = GET_MARKET_SUMMARIES_URL;
+  return get(url, { json: true })
+    .then(function(res) {
+      const { body } = res;
+      if (body.success) {
+        return body.result;
+      } else {
+        return Promise.reject();
+      }
+    })
+    .catch(function(error) {
+      if (error != null) {
+        logError(error.response.body);
+      }
+      throw new Error(`Failed to fetch market summaries`);
+    });
+}
+
 module.exports = {
   getMarketTicker,
   getOrderBook,
   getMarketSummary,
+  getMarketSummaries,
 };

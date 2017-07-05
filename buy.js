@@ -66,9 +66,9 @@ async function sellChunk(params) {
 
     let remainingQuantity = 0;
     let isOrderClosed = false;
-    const limit = i === 0 ? 40 : 30;
+    const limit = i === 0 ? 35 : 25;
     for (let j = 0; j < limit; j++) {
-      logInfo(`Fetch information for order ${orderId}`);
+      logInfo(`Fetch information for SELL order ${orderId}`);
       const order = await getAccountOrder(orderId);
       const {
         Closed: orderClosedTime,
@@ -78,7 +78,7 @@ async function sellChunk(params) {
       // Order is closed
       if (orderClosedTime != null || !isOrderOpened) {
         logSuccess(
-          `Order completed successfully for selling ${quantity} ${targetCurrency} at rate ${rate}`
+          `SELL order completed successfully for selling ${quantity} ${targetCurrency} at rate ${rate}`
         );
         isOrderClosed = true;
         break;
@@ -86,25 +86,26 @@ async function sellChunk(params) {
         // Order is still being filled
         remainingQuantity = orderRemaining;
         logInfo(
-          `Order is now partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+          `SELL order is now partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
         );
       } else {
         logWarning(
-          `Order is still stucked at ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+          `SELL order is still stucked at ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
         );
       }
+      await sleep(100);
     }
     if (!isOrderClosed) {
       // Cancel order
       try {
         logWarning(
-          `Attempted to cancel the current order since it took too long`
+          `Attempted to cancel the current SELL order since it took too long`
         );
         await cancelOrder(orderId);
       } catch (error) {
         // Failed to cancel order, might be because order is closed
         logSuccess(
-          `Order completed successfully for selling ${quantity} ${targetCurrency} at rate ${rate}`
+          `SELL order completed successfully for selling ${quantity} ${targetCurrency} at rate ${rate}`
         );
         isOrderClosed = true;
         break;
@@ -127,8 +128,8 @@ async function trackCloseOrder(params) {
 
   let remainingQuantity = quantity;
   let isOrderClosed = false;
-  for (let j = 0; j < 35; j++) {
-    logInfo(`Fetch information for order ${orderId} ${j}`);
+  for (let j = 0; j < 30; j++) {
+    logInfo(`Fetch information for BUY order ${orderId} ${j}`);
     const order = await getAccountOrder(orderId);
     const {
       Closed: orderClosedTime,
@@ -138,7 +139,7 @@ async function trackCloseOrder(params) {
     // Order is closed
     if (orderClosedTime != null || !isOrderOpened) {
       logSuccess(
-        `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
+        `BUY order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate}`
       );
       isOrderClosed = true;
       break;
@@ -146,25 +147,26 @@ async function trackCloseOrder(params) {
       // Order is still being filled
       remainingQuantity = orderRemaining;
       logInfo(
-        `Order is now partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+        `BUY order is now partially filled with ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
       );
     } else {
       logWarning(
-        `Order is still stucked at ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
+        `BUY order is still stucked at ${remainingQuantity} / ${quantity} ${targetCurrency} remaining at rate ${rate}`
       );
     }
+    await sleep(100);
   }
   if (!isOrderClosed) {
     // Cancel order
     try {
       logWarning(
-        `Attempted to cancel the current order since it took too long`
+        `Attempted to cancel the current BUY order since it took too long`
       );
       await cancelOrder(orderId);
     } catch (error) {
       // Failed to cancel order, might be because order is closed
       logSuccess(
-        `Order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate} since cancel request failed`
+        `BUY order completed successfully for buying ${quantity} ${targetCurrency} at rate ${rate} since cancel request failed`
       );
       isOrderClosed = true;
     }
@@ -282,15 +284,19 @@ async function runBot() {
   logInfo(
     `We will use ${chunkSourceAmount} ${sourceCurrency} for ${CHUNK_COUNT} chunk(s)`
   );
-  const res = await getMarketSummary(market);
-  const lowestRate = res[0].Low;
+
+  // const res = await getMarketSummary(market);
+  // const lowestRate = res[0].Low;
+
+  const { Ask: sellRate } = await getMarketTicker(market);
+
   await Promise.all(
     // eslint-disable-next-line prefer-spread
     Array.apply(null, new Array(CHUNK_COUNT)).map(function() {
       buyChunk({
         market,
         chunkSourceAmount,
-        initialRate: lowestRate,
+        initialRate: sellRate,
         sourceCurrency,
         targetCurrency,
       });

@@ -146,11 +146,7 @@ class TelegramChannelLatestMessageClient(TelegramClient):
             r"https://bittrex.com/Market/Index\?MarketName=BTC-(\w+)"
         )
         while True:
-            startTime = time()
             message = self.getLatestMessageFromMessageHistory(pumpChannel)
-            elapsedTime = time() - startTime
-            print('Request finished in {} ms'.format(int(elapsedTime * 1000)))
-
             if messageId != message.id:
                 messageId = message.id
                 content = message.message
@@ -168,7 +164,7 @@ class TelegramChannelLatestMessageClient(TelegramClient):
                 print('\nMessage\n', update_object.updates[0].message.message)
 
 
-USER_PHONE = '+84918089022'
+USER_PHONE = '+6583496137'
 API_ID = '168321'
 API_HASH = '8e51af0eba7487cf74934cb9c9005a3b'
 client = TelegramChannelLatestMessageClient(
