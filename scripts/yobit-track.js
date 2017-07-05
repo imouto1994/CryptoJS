@@ -6,7 +6,12 @@ const winston = require("winston");
 const forEach = require("lodash/forEach");
 const chunk = require("lodash/chunk");
 
-const { getExchangeInfo, getMarketTickers } = require("../src/yobit/ApiPublic");
+const {
+  getExchangeInfo,
+  getMarketTickers,
+  getMarketDepths,
+  getMarketTrades,
+} = require("../src/yobit/ApiPublic");
 const { sleep } = require("../src/utils");
 
 const logger = new winston.Logger({
@@ -27,7 +32,52 @@ const logger = new winston.Logger({
   exitOnError: false,
 });
 
+/**
+ *
+ *
+ * @param {any} market
+ * @returns
+ */
+function createMarketLogger(market) {
+  return new winston.Logger({
+    transports: [
+      new winston.transports.Console({
+        timestamp() {
+          return new Date().toLocaleString();
+        },
+      }),
+      new winston.transports.File({
+        filename: `logs/yobit-track-market-${market}-${new Date().toLocaleString()}.log`,
+        json: false,
+        timestamp() {
+          return new Date().toLocaleString();
+        },
+      }),
+    ],
+  });
+}
+
+async function trackMarketOrders(market) {
+  const marketLogger = createMarketLogger(market);
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const [marketTrades, marketDepth] = await Promise.all([
+      getMarketTrades([market]),
+      getMarketDepths([market]),
+    ]);
+    marketLogger.logInfo(
+      `Market Trades:\n${JSON.stringify(marketTrades, null, 2)}`
+    );
+    marketLogger.logInfo(
+      `Market Depth:\n${JSON.stringify(marketDepth, null, 2)}`
+    );
+    await sleep(1500);
+  }
+}
+
 async function trackMarketTickers(marketGroup, index) {
+  const potentialMarkets = {};
   const rate = 1.5;
   const dequeMaxLength = 5;
   logger.info(
@@ -57,7 +107,16 @@ async function trackMarketTickers(marketGroup, index) {
                 "\n" +
                 JSON.stringify(oldTicker, null, 2)
             );
-            logger.info(`POTENTIAL MARKET: ${market}`);
+            logger.info(`NEW POTENTIAL MARKET: ${market}`);
+
+            // Track orders for new potential market
+            if (potentialMarkets[market] == null) {
+              potentialMarkets[market] = true;
+              trackMarketOrders(market);
+              setTimeout(() => {
+                delete potentialMarkets[market];
+              }, 30000);
+            }
             break;
           }
         }
