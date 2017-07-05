@@ -75,8 +75,8 @@ async function trackMarketOrders(market) {
 
 async function trackMarketTickers(marketGroup, index) {
   const potentialMarkets = {};
-  const rate = 1.4;
-  const dequeMaxLength = 5;
+  const rate = 1.35;
+  const dequeMaxLength = 7;
   logger.info(
     `Start tracking with rate ${rate} and deque length at ${dequeMaxLength} for group ${index}`
   );
