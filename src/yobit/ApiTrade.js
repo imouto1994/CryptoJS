@@ -27,7 +27,7 @@ function makeTradeOrder({ market, type, rate, amount }) {
     headers: {
       Key: YOBIT_API_KEY,
       Sign: getYobitApiSign(
-        `nonce=${body.nonce}&method=${body.method}&pair=${body.pair}&type=${body.type}&rate=${body.rate}&amount=${body.amount}`
+        `nonce=${body.nonce}&method=${body.method}&pair=${body.pair}&type=${body.type}&rate=${body.rate}&amount=${body.amount}`,
       ),
     },
   })
@@ -70,7 +70,7 @@ function getOrderInfo(orderId) {
     headers: {
       Key: YOBIT_API_KEY,
       Sign: getYobitApiSign(
-        `nonce=${body.nonce}&method=${body.method}&order_id=${body.order_id}`
+        `nonce=${body.nonce}&method=${body.method}&order_id=${body.order_id}`,
       ),
     },
   })
@@ -113,7 +113,7 @@ function cancelOrder(orderId) {
     headers: {
       Key: YOBIT_API_KEY,
       Sign: getYobitApiSign(
-        `nonce=${body.nonce}&method=${body.method}&order_id=${body.order_id}`
+        `nonce=${body.nonce}&method=${body.method}&order_id=${body.order_id}`,
       ),
     },
   })

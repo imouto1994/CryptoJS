@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "lint": "eslint src scripts",
-    "format": "prettier --trailing-comma es5 --write '{src|scripts}/**/*.js'",
+    "format": "prettier --trailing-comma all --write '{src|scripts}/**/*.js'",
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "precommit": "lint-staged",
     "bittrex": "node scripts/bittrex.js",
@@ -17,7 +17,7 @@
     "yobit-summaries": "node scripts/yobit-summaries.js"
   },
   "lint-staged": {
-    "*.js": ["prettier --write --trailing-comma es5", "git add"]
+    "*.js": ["prettier --write --trailing-comma all", "git add"]
   },
   "dependencies": {
     "agentkeepalive": "3.3.0",

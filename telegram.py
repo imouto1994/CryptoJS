@@ -165,8 +165,8 @@ class TelegramChannelLatestMessageClient(TelegramClient):
 
 
 USER_PHONE = '+6583496137'
-API_ID = '168321'
-API_HASH = '8e51af0eba7487cf74934cb9c9005a3b'
+API_ID = '170060'
+API_HASH = 'b33c2337f604dd0bcfe1be3df6b41f3a'
 client = TelegramChannelLatestMessageClient(
     'session_id', USER_PHONE, API_ID, API_HASH
 )

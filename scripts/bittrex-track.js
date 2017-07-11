@@ -14,6 +14,7 @@ const logger = new winston.Logger({
       timestamp() {
         return new Date().toLocaleString();
       },
+      colorize: true,
     }),
     new winston.transports.File({
       filename: `logs/bittrex-track-${new Date().toLocaleString()}.log`,
@@ -28,9 +29,9 @@ const logger = new winston.Logger({
 
 async function main() {
   const rate = 1.15;
-  const dequeMaxLength = 5;
+  const dequeMaxLength = 7;
   logger.info(
-    `Start tracking with rate ${rate} and deque length at ${dequeMaxLength}`
+    `Start tracking with rate ${rate} and deque length at ${dequeMaxLength}`,
   );
 
   let iteration = 0;
@@ -62,7 +63,7 @@ async function main() {
               `Iteration ${iteration} - Index: ${i}\n` +
                 JSON.stringify(summary, null, 2) +
                 "\n" +
-                JSON.stringify(oldSummary, null, 2)
+                JSON.stringify(oldSummary, null, 2),
             );
             logger.info(`POTENTIAL MARKET: ${market}`);
             break;
