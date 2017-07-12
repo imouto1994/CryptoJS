@@ -13,6 +13,7 @@ const logger = new winston.Logger({
       timestamp() {
         return new Date().toLocaleString();
       },
+      colorize: true,
     }),
     new winston.transports.File({
       filename: `logs/yobit-summaries-${new Date().toLocaleString()}.log`,
@@ -39,13 +40,13 @@ async function main() {
 
   const exchangeInfo = await getExchangeInfo();
   const btcMarkets = Object.keys(exchangeInfo.pairs).filter(key =>
-    key.endsWith("_btc")
+    key.endsWith("_btc"),
   );
   const btcMarketsGroups = chunk(btcMarkets, 50);
 
   await Promise.all([
     btcMarketsGroups.map((marketGroup, index) =>
-      trackMarketTickers(marketGroup, index)
+      trackMarketTickers(marketGroup, index),
     ),
   ]);
 }

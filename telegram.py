@@ -170,4 +170,4 @@ API_HASH = 'b33c2337f604dd0bcfe1be3df6b41f3a'
 client = TelegramChannelLatestMessageClient(
     'session_id', USER_PHONE, API_ID, API_HASH
 )
-client.trackLatestMessage()
+client.getConfig()

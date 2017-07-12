@@ -10,14 +10,17 @@
     "eslint-check": "eslint --print-config .eslintrc.js | eslint-config-prettier-check",
     "precommit": "lint-staged",
     "bittrex": "node scripts/bittrex.js",
-    "bittrex-track": "node scripts/bittrex-track.js",
-    "bittrex-summaries": "node scripts/bittrex-summaries.js",
+    "bittrex-track": "node scripts/bittrex-track.js --track",
+    "bittrex-summaries": "node scripts/bittrex-summaries.js --summaries",
     "yobit": "node scripts/yobit.js",
     "yobit-track": "node scripts/yobit-track.js",
     "yobit-summaries": "node scripts/yobit-summaries.js"
   },
   "lint-staged": {
-    "*.js": ["prettier --write --trailing-comma all", "git add"]
+    "*.js": [
+      "prettier --write --trailing-comma all",
+      "git add"
+    ]
   },
   "dependencies": {
     "agentkeepalive": "3.3.0",
@@ -27,6 +30,8 @@
     "got": "7.1.0",
     "inquirer": "3.1.1",
     "lodash": "4.17.4",
+    "minimist": "1.2.0",
+    "moment": "2.18.1",
     "winston": "2.3.1"
   },
   "devDependencies": {

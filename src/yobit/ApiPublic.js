@@ -4,7 +4,6 @@ const {
   YOBIT_GET_MARKET_TRADES_URL,
   YOBIT_GET_EXCHANGE_INFO,
 } = require("../constants");
-const { logError } = require("../utils");
 const { get } = require("../request");
 
 /**
@@ -14,17 +13,10 @@ const { get } = require("../request");
  */
 function getExchangeInfo() {
   const url = YOBIT_GET_EXCHANGE_INFO;
-  return get(url, { json: true })
-    .then(function(res) {
-      const { body } = res;
-      return body;
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error("Failed to fetch exchange info");
-    });
+  return get(url, { json: true }).then(function(res) {
+    const { body } = res;
+    return body;
+  });
 }
 
 /**
@@ -38,17 +30,10 @@ function getMarketDepths(markets, limit = 150) {
     YOBIT_GET_MARKET_DEPTH_URL +
     markets.join("-") +
     `?ignore_invalid=1&limit=${limit}`;
-  return get(url, { json: true })
-    .then(function(res) {
-      const { body } = res;
-      return body;
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(`Failed to fetch market depth`);
-    });
+  return get(url, { json: true }).then(function(res) {
+    const { body } = res;
+    return body;
+  });
 }
 
 /**
@@ -60,17 +45,10 @@ function getMarketDepths(markets, limit = 150) {
 function getMarketTickers(markets) {
   const url =
     YOBIT_GET_MARKET_TICKER_URL + markets.join("-") + "?ignore_invalid=1";
-  return get(url, { json: true })
-    .then(function(res) {
-      const { body } = res;
-      return body;
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(`Failed to fetch market ticker`);
-    });
+  return get(url, { json: true }).then(function(res) {
+    const { body } = res;
+    return body;
+  });
 }
 
 /**
@@ -84,17 +62,10 @@ function getMarketTrades(markets, limit = 150) {
     YOBIT_GET_MARKET_TRADES_URL +
     markets.join("-") +
     `?ignore_invalid=1&limit=${limit}`;
-  return get(url, { json: true })
-    .then(function(res) {
-      const { body } = res;
-      return body;
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(`Failed to fetch market trades`);
-    });
+  return get(url, { json: true }).then(function(res) {
+    const { body } = res;
+    return body;
+  });
 }
 
 module.exports = {

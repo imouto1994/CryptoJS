@@ -6,7 +6,6 @@ const {
   BITTREX_GET_OPEN_ORDERS_URL,
 } = require("../constants");
 const { getBittrexApiSign, getNonce } = require("../auth");
-const { logError } = require("../utils");
 const { get } = require("../request");
 
 /**
@@ -19,23 +18,22 @@ function makeBuyOrder(params) {
   const { market, quantity, rate } = params;
   const url = `${BITTREX_BUY_LIMIT_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
-  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.result.uuid;
-      } else {
-        return Promise.reject();
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(
-        `Failed to make a BUY order in market ${market} for amount of ${quantity} at rate ${rate}`
+  return get(url, {
+    json: true,
+    headers: { apisign: getBittrexApiSign(url) },
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.result.uuid;
+    } else {
+      return Promise.reject(
+        new Error(
+          body.message ||
+            `Failed to make a BUY order in market ${market} for amount of ${quantity} at rate ${rate}`,
+        ),
       );
-    });
+    }
+  });
 }
 
 /**
@@ -48,23 +46,22 @@ function makeSellOrder(params) {
   const { market, quantity, rate } = params;
   const url = `${BITTREX_SELL_LIMIT_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}&quantity=${quantity}&rate=${rate}`;
 
-  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.result.uuid;
-      } else {
-        return Promise.reject();
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(
-        `Failed to make a SELL order in market ${market} for amount of ${quantity} at rate ${rate}`
+  return get(url, {
+    json: true,
+    headers: { apisign: getBittrexApiSign(url) },
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.result.uuid;
+    } else {
+      return Promise.reject(
+        new Error(
+          body.message ||
+            `Failed to make a SELL order in market ${market} for amount of ${quantity} at rate ${rate}`,
+        ),
       );
-    });
+    }
+  });
 }
 
 /**
@@ -76,21 +73,19 @@ function makeSellOrder(params) {
 function cancelOrder(orderId) {
   const url = `${BITTREX_CANCEL_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
 
-  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return null;
-      } else {
-        return Promise.reject();
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(`Failed to cancel order ${orderId}`);
-    });
+  return get(url, {
+    json: true,
+    headers: { apisign: getBittrexApiSign(url) },
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return null;
+    } else {
+      return Promise.reject(
+        new Error(body.message || `Failed to cancel order ${orderId}`),
+      );
+    }
+  });
 }
 
 /**
@@ -102,23 +97,22 @@ function cancelOrder(orderId) {
 function getOpenOrders(market) {
   const url = `${BITTREX_GET_OPEN_ORDERS_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}`;
 
-  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.result;
-      } else {
-        return Promise.reject();
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(
-        `Failed to fetch list of open orders in market ${market}`
+  return get(url, {
+    json: true,
+    headers: { apisign: getBittrexApiSign(url) },
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.result;
+    } else {
+      return Promise.reject(
+        new Error(
+          body.message ||
+            `Failed to fetch list of open orders in market ${market}`,
+        ),
       );
-    });
+    }
+  });
 }
 
 module.exports = {

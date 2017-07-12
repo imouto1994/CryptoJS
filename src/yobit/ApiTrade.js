@@ -1,7 +1,4 @@
-const get = require("lodash/get");
-
 const { YOBIT_TRADE_API_URL, YOBIT_API_KEY } = require("../constants");
-const { logError } = require("../utils");
 const { getYobitApiSign, getNonce } = require("../auth");
 const { post } = require("../request");
 
@@ -30,25 +27,16 @@ function makeTradeOrder({ market, type, rate, amount }) {
         `nonce=${body.nonce}&method=${body.method}&pair=${body.pair}&type=${body.type}&rate=${body.rate}&amount=${body.amount}`,
       ),
     },
-  })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.return;
-      } else {
-        return Promise.reject(body.error);
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        if (typeof error === "string") {
-          logError(error);
-        } else {
-          logError(get(error, "response.body"));
-        }
-      }
-      throw new Error("Failed to make trade order");
-    });
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.return;
+    } else {
+      return Promise.reject(
+        new Error(body.error || "Failed to make trade order"),
+      );
+    }
+  });
 }
 
 /**
@@ -73,25 +61,16 @@ function getOrderInfo(orderId) {
         `nonce=${body.nonce}&method=${body.method}&order_id=${body.order_id}`,
       ),
     },
-  })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.return;
-      } else {
-        return Promise.reject(body.error);
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        if (typeof error === "string") {
-          logError(error);
-        } else {
-          logError(get(error, "response.body"));
-        }
-      }
-      throw new Error("Failed to get order info");
-    });
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.return;
+    } else {
+      return Promise.reject(
+        new Error(body.error || "Failed to get order info"),
+      );
+    }
+  });
 }
 
 /**
@@ -116,25 +95,14 @@ function cancelOrder(orderId) {
         `nonce=${body.nonce}&method=${body.method}&order_id=${body.order_id}`,
       ),
     },
-  })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.return;
-      } else {
-        return Promise.reject(body.error);
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        if (typeof error === "string") {
-          logError(error);
-        } else {
-          logError(get(error, "response.body"));
-        }
-      }
-      throw new Error("Failed to cancel order");
-    });
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.return;
+    } else {
+      return Promise.reject(new Error(body.error || "Failed to cancel order"));
+    }
+  });
 }
 
 /**
@@ -155,25 +123,16 @@ function getAccountInfo() {
       Key: YOBIT_API_KEY,
       Sign: getYobitApiSign(`nonce=${body.nonce}&method=${body.method}`),
     },
-  })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.return;
-      } else {
-        return Promise.reject(body.error);
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        if (typeof error === "string") {
-          logError(error);
-        } else {
-          logError(get(error, "response.body"));
-        }
-      }
-      throw new Error("Failed to get account info");
-    });
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.return;
+    } else {
+      return Promise.reject(
+        new Error(body.error || "Failed to get account info"),
+      );
+    }
+  });
 }
 
 module.exports = {

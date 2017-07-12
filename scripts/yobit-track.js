@@ -20,6 +20,7 @@ const logger = new winston.Logger({
       timestamp() {
         return new Date().toLocaleString();
       },
+      colorize: true,
     }),
     new winston.transports.File({
       filename: `logs/yobit-track-${new Date().toLocaleString()}.log`,
@@ -63,7 +64,7 @@ async function trackMarketOrders(market) {
       getMarketDepths([market], 600),
     ]);
     marketLogger.info(
-      `Market Trades:\n${JSON.stringify(marketTrades, null, 2)}`
+      `Market Trades:\n${JSON.stringify(marketTrades, null, 2)}`,
     );
     marketLogger.info(`Market Depth:\n${JSON.stringify(marketDepth, null, 2)}`);
     await sleep(1500);
@@ -78,7 +79,7 @@ async function trackMarketTickers(marketGroup, index) {
   const rate = 1.35;
   const dequeMaxLength = 7;
   logger.info(
-    `Start tracking with rate ${rate} and deque length at ${dequeMaxLength} for group ${index}`
+    `Start tracking with rate ${rate} and deque length at ${dequeMaxLength} for group ${index}`,
   );
 
   let iteration = 0;
@@ -103,7 +104,7 @@ async function trackMarketTickers(marketGroup, index) {
                 `Iteration ${iteration} - Group Index: ${index} - Index: ${i}\n` +
                   JSON.stringify(ticker, null, 2) +
                   "\n" +
-                  JSON.stringify(oldTicker, null, 2)
+                  JSON.stringify(oldTicker, null, 2),
               );
               logger.info(`NEW POTENTIAL MARKET: ${market}`);
 
@@ -143,13 +144,13 @@ async function trackMarketTickers(marketGroup, index) {
 async function main() {
   const exchangeInfo = await getExchangeInfo();
   const btcMarkets = Object.keys(exchangeInfo.pairs).filter(key =>
-    key.endsWith("_btc")
+    key.endsWith("_btc"),
   );
   const btcMarketsGroups = chunk(btcMarkets, 50);
 
   await Promise.all([
     btcMarketsGroups.map((marketGroup, index) =>
-      trackMarketTickers(marketGroup, index)
+      trackMarketTickers(marketGroup, index),
     ),
   ]);
 }

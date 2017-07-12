@@ -5,7 +5,6 @@ const {
   BITTREX_GET_ORDERS_HISTORY_URL,
 } = require("../constants");
 const { getBittrexApiSign, getNonce } = require("../auth");
-const { logError } = require("../utils");
 const { get } = require("../request");
 
 /**
@@ -17,23 +16,22 @@ const { get } = require("../request");
 function getAccountBalance(currency) {
   const url = `${BITTREX_GET_BALANCE_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&currency=${currency}`;
 
-  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.result;
-      } else {
-        return Promise.reject();
-      }
-    })
-    .catch(function(error) {
-      if (error != null) {
-        logError(error.response.body);
-        throw new Error(
-          `Failed to fetch account balance for currency ${currency}`
-        );
-      }
-    });
+  return get(url, {
+    json: true,
+    headers: { apisign: getBittrexApiSign(url) },
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.result;
+    } else {
+      return Promise.reject(
+        new Error(
+          body.message ||
+            `Failed to fetch account balance for currency ${currency}`,
+        ),
+      );
+    }
+  });
 }
 
 /**
@@ -45,21 +43,21 @@ function getAccountBalance(currency) {
 function getAccountOrder(orderId) {
   const url = `${BITTREX_GET_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
 
-  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.result;
-      } else {
-        return Promise.reject();
-      }
-    })
-    .catch(error => {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(`Failed to fetch info about order ${orderId}`);
-    });
+  return get(url, {
+    json: true,
+    headers: { apisign: getBittrexApiSign(url) },
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      return body.result;
+    } else {
+      return Promise.reject(
+        new Error(
+          body.message || `Failed to fetch info about order ${orderId}`,
+        ),
+      );
+    }
+  });
 }
 
 /**
@@ -71,21 +69,22 @@ function getAccountOrder(orderId) {
 function getAccountOrdersHistory(market) {
   const url = `${BITTREX_GET_ORDERS_HISTORY_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}`;
 
-  return get(url, { json: true, headers: { apisign: getBittrexApiSign(url) } })
-    .then(function(res) {
-      const { body } = res;
-      if (body.success) {
-        return body.result;
-      } else {
-        return Promise.reject();
-      }
-    })
-    .catch(error => {
-      if (error != null) {
-        logError(error.response.body);
-      }
-      throw new Error(`Failed to fetch order history for market ${market}`);
-    });
+  return get(url, {
+    json: true,
+    headers: { apisign: getBittrexApiSign(url) },
+  }).then(function(res) {
+    const { body } = res;
+    if (body.success) {
+      console.log(body.result);
+      return body.result;
+    } else {
+      return Promise.reject(
+        new Error(
+          body.message || `Failed to fetch order history for market ${market}`,
+        ),
+      );
+    }
+  });
 }
 
 module.exports = {

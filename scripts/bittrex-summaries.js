@@ -2,16 +2,19 @@
 global.Promise = require("bluebird");
 
 const winston = require("winston");
+const minimist = require("minimist");
 
 const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
 const { sleep } = require("../src/utils");
 
+const argv = minimist(process.argv.slice(2));
 const logger = new winston.Logger({
   transports: [
     new winston.transports.Console({
       timestamp() {
         return new Date().toLocaleString();
       },
+      colorize: true,
     }),
     new winston.transports.File({
       filename: `logs/bittrex-summaries-${new Date().toLocaleString()}.log`,
@@ -24,7 +27,7 @@ const logger = new winston.Logger({
   exitOnError: false,
 });
 
-async function main() {
+async function summaries() {
   logger.info("Start logging summaries for Bittrex...");
 
   // eslint-disable-next-line no-constant-condition
@@ -36,4 +39,8 @@ async function main() {
 }
 
 // Run program
-main();
+if (argv.summaries) {
+  summaries();
+}
+
+export { summaries as default };
