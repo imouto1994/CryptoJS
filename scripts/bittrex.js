@@ -51,15 +51,15 @@ const logger = new winston.Logger({
 // Time Markers
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
 const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
-const SIGNAL_SELL_DEADLINE_TIME = SIGNAL_TIME + 27 * 1000;
+const SIGNAL_SELL_DEADLINE_TIME = SIGNAL_TIME + 28 * 1000;
 
 /**
  *
  *
  * @param {any} params
  */
-const SELL_TRACK_CLOSE_ITERATION = 30;
-const SELL_TRACK_CLOSE_DURATION = 100;
+const SELL_TRACK_CLOSE_ITERATION = 25;
+const SELL_TRACK_CLOSE_DURATION = 50;
 async function sellChunk(params) {
   const {
     market,
@@ -92,11 +92,11 @@ async function sellChunk(params) {
         rate,
       });
       logger.info(
-        `[SELL] Attempted for AMOUNT of ${chunkTargetAmount} ${targetCurrency} at RATE ${rate}`,
+        `[SELL] Attempted for AMOUNT of ${quantity} ${targetCurrency} at RATE ${rate}`,
       );
     } catch (err) {
       logger.error(
-        `[SELL] Failed to attempt for AMOUNT of ${chunkTargetAmount} ${targetCurrency} at RATE ${rate}`,
+        `[SELL] Failed to attempt for AMOUNT of ${quantity} ${targetCurrency} at RATE ${rate}`,
       );
     }
 
@@ -109,7 +109,7 @@ async function sellChunk(params) {
     for (let j = 0; j < SELL_TRACK_CLOSE_ITERATION; j++) {
       if (i < 2 && getCurrentTime() > SIGNAL_SELL_DEADLINE_TIME) {
         logger.info(
-          `[BUY] Current time surpassed sell deadline. We will attempt to sell everything left asap`,
+          `[SELL] Current time surpassed sell deadline. We will attempt to sell everything left asap`,
         );
         shouldSellAsap = true;
         break;
@@ -177,7 +177,7 @@ async function sellChunk(params) {
  * @param {any} params
  */
 const BUY_TRACK_CLOSE_ITERATION = 30;
-const BUY_TRACK_CLOSE_SLEEP_DURATION = 100;
+const BUY_TRACK_CLOSE_SLEEP_DURATION = 50;
 async function trackCloseOrder(params) {
   const { orderId, quantity, baseRate, rate, targetCurrency, market } = params;
 
@@ -237,6 +237,7 @@ async function trackCloseOrder(params) {
 
   if (isOrderClosed) {
     const order = await getAccountOrder(orderId);
+    // Check if we did buy anything
     if (!isEqual(order.Quantity, order.QuantityRemaining)) {
       await sellChunk({
         market,
@@ -331,7 +332,12 @@ async function runBot() {
     return;
   }
 
-  const potentialMarketSummaries = await bittrexTrack(true, 1.005, 7);
+  const potentialMarketSummaries = await bittrexTrack(
+    true,
+    1.175,
+    7,
+    SIGNAL_TIME,
+  );
   const market = potentialMarketSummaries.summary.MarketName;
   const sellRate = potentialMarketSummaries.oldSummary.Ask;
 
@@ -355,7 +361,7 @@ async function runBot() {
     CURRENCY_PRECISION,
   );
   logger.info(
-    `[PREP] We will use ${chunkSourceAmount} ${sourceCurrency} for ${CHUNK_COUNT} chunk(s)`,
+    `[PREP] We will use ${chunkSourceAmount} ${sourceCurrency} for ${CHUNK_COUNT} chunk(s) at BASE RATE ${sellRate}`,
   );
 
   // Stop early if chunk source amount is 0

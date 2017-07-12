@@ -7,7 +7,7 @@ const winston = require("winston");
 const minimist = require("minimist");
 
 const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
-const { sleep } = require("../src/utils");
+const { sleep, getCurrentTime } = require("../src/utils");
 
 const argv = minimist(process.argv.slice(2));
 const logger = new winston.Logger({
@@ -29,7 +29,12 @@ const logger = new winston.Logger({
   exitOnError: false,
 });
 
-async function track(isSingleFind = false, rate = 1.15, dequeMaxLength = 7) {
+async function track(
+  isSingleFind = false,
+  rate = 1.15,
+  dequeMaxLength = 7,
+  targetTime,
+) {
   logger.info(
     `Start tracking with rate ${rate} and deque length at ${dequeMaxLength}`,
   );
@@ -62,19 +67,21 @@ async function track(isSingleFind = false, rate = 1.15, dequeMaxLength = 7) {
               summary.Bid > oldSummary.BidWithRate ||
               summary.Ask > oldSummary.AskWithRate
             ) {
-              logger.info(
-                `Iteration ${iteration} - Index: ${i}\n` +
-                  JSON.stringify(summary, null, 2) +
-                  "\n" +
-                  JSON.stringify(oldSummary, null, 2),
-              );
-              logger.info(`POTENTIAL MARKET: ${market}`);
-              potentialMarkets[market] = dequeMaxLength + 1;
-              if (isSingleFind) {
-                potentialMarketSummaries = { summary, oldSummary };
-                return false;
+              if (targetTime == null || getCurrentTime() > targetTime) {
+                logger.info(
+                  `Iteration ${iteration} - Index: ${i}\n` +
+                    JSON.stringify(summary, null, 2) +
+                    "\n" +
+                    JSON.stringify(oldSummary, null, 2),
+                );
+                logger.info(`POTENTIAL MARKET: ${market}`);
+                potentialMarkets[market] = dequeMaxLength + 1;
+                if (isSingleFind) {
+                  potentialMarketSummaries = { summary, oldSummary };
+                  return false;
+                }
+                break;
               }
-              break;
             }
           }
         }
@@ -112,7 +119,7 @@ async function track(isSingleFind = false, rate = 1.15, dequeMaxLength = 7) {
 
 // Run program
 if (argv.track) {
-  track();
+  track(false, 1.2);
 }
 
 module.exports = track;
