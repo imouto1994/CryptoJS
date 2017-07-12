@@ -27,6 +27,10 @@ const logger = new winston.Logger({
   exitOnError: false,
 });
 
+/**
+ * 
+ * 
+ */
 async function summaries() {
   logger.info("Start logging summaries for Bittrex...");
 
@@ -43,4 +47,4 @@ if (argv.summaries) {
   summaries();
 }
 
-export { summaries as default };
+module.exports = summaries;

@@ -4,6 +4,7 @@ global.Promise = require("bluebird");
 const forEach = require("lodash/forEach");
 const Deque = require("double-ended-queue");
 const winston = require("winston");
+const moment = require("moment");
 const minimist = require("minimist");
 
 const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
@@ -67,21 +68,25 @@ async function track(
               summary.Bid > oldSummary.BidWithRate ||
               summary.Ask > oldSummary.AskWithRate
             ) {
-              if (targetTime == null || getCurrentTime() > targetTime) {
-                logger.info(
-                  `Iteration ${iteration} - Index: ${i}\n` +
-                    JSON.stringify(summary, null, 2) +
-                    "\n" +
-                    JSON.stringify(oldSummary, null, 2),
-                );
+              potentialMarkets[market] = dequeMaxLength + 1;
+              logger.info(
+                `Iteration ${iteration} - Index: ${i}\n` +
+                  JSON.stringify(summary, null, 2) +
+                  "\n" +
+                  JSON.stringify(oldSummary, null, 2),
+              );
+              const timestamp = summary.TimeStamp;
+              if (
+                targetTime != null &&
+                moment(`${timestamp}+0000`).valueOf() > targetTime
+              ) {
                 logger.info(`POTENTIAL MARKET: ${market}`);
-                potentialMarkets[market] = dequeMaxLength + 1;
                 if (isSingleFind) {
                   potentialMarketSummaries = { summary, oldSummary };
                   return false;
                 }
-                break;
               }
+              break;
             }
           }
         }
