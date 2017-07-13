@@ -19,14 +19,11 @@ const {
 const {
   CURRENCY_BITCOIN,
   CURRENCY_PRECISION,
-  CHUNK_COUNT,
   BITTREX_COMMISSION_RATE,
-  EXCHANGE_RATE_STEP,
-  BUY_RATE,
-  SELL_RATE,
 } = require("../src/constants");
 const { sleep, isEqual, getCurrentTime } = require("../src/utils");
 const bittrexTrack = require("./bittrex-track");
+const bittrexTrackSocket = require("./bittrex-track-socket");
 
 // Setup logger
 const logger = new winston.Logger({
@@ -48,24 +45,31 @@ const logger = new winston.Logger({
   exitOnError: false,
 });
 
-// Time Markers
+// Constants
+const RATE = 1.225;
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
 const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
-const SIGNAL_SELL_DEADLINE_TIME = SIGNAL_TIME + 28 * 1000;
+const SIGNAL_SELL_DEADLINE_TIME = SIGNAL_TIME + 27 * 1000;
+const CHUNK_COUNT = 1;
 
 /**
  *
  *
  * @param {any} params
  */
-const SELL_TRACK_CLOSE_ITERATION = 25;
-const SELL_TRACK_CLOSE_DURATION = 50;
+const SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT = 35;
+const SELL_TRACK_CLOSE_SECOND_ITERATION_COUNT = 40;
+const SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT = 30;
+const SELL_TRACK_CLOSE_TIMEOUT = 50;
+const BEFORE_SIGNAL_RATE_SELL_MULTIPLIER = 2.25;
+const AFTER_SIGNAL_RATE_SELL_MULTIPLIER = 1.5;
+const CURRENT_RATE_SELL_MULTIPLIER = 0.95;
 async function sellChunk(params) {
   const {
     market,
     chunkTargetAmount,
-    baseRate,
-    buyRate,
+    beforeSignalRate,
+    afterSignalRate,
     targetCurrency,
   } = params;
 
@@ -74,13 +78,34 @@ async function sellChunk(params) {
   for (let i = 0; i < 5; i++) {
     // Calculate rate
     let rate;
+    let iterationCount;
+    const { Bid: latestRate } = await getMarketTicker(market);
     if (!shouldSellAsap && i === 0) {
-      rate = floor(baseRate * SELL_RATE, CURRENCY_PRECISION);
+      iterationCount = SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT;
+      rate = floor(
+        Math.max(
+          BEFORE_SIGNAL_RATE_SELL_MULTIPLIER * beforeSignalRate,
+          AFTER_SIGNAL_RATE_SELL_MULTIPLIER * afterSignalRate,
+          latestRate * CURRENT_RATE_SELL_MULTIPLIER,
+        ),
+        CURRENCY_PRECISION,
+      );
     } else if (!shouldSellAsap && i === 1) {
-      rate = floor(buyRate * (1 - EXCHANGE_RATE_STEP), CURRENCY_PRECISION);
+      iterationCount = SELL_TRACK_CLOSE_SECOND_ITERATION_COUNT;
+      rate = floor(
+        Math.min(
+          BEFORE_SIGNAL_RATE_SELL_MULTIPLIER * beforeSignalRate,
+          AFTER_SIGNAL_RATE_SELL_MULTIPLIER * afterSignalRate,
+          latestRate * CURRENT_RATE_SELL_MULTIPLIER,
+        ),
+        CURRENCY_PRECISION,
+      );
     } else {
-      const { Bid: latestRate } = await getMarketTicker(market);
-      rate = floor(latestRate * (1 - EXCHANGE_RATE_STEP), CURRENCY_PRECISION);
+      iterationCount = SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT;
+      rate = floor(
+        latestRate * CURRENT_RATE_SELL_MULTIPLIER,
+        CURRENCY_PRECISION,
+      );
     }
 
     // Make sell order
@@ -106,7 +131,7 @@ async function sellChunk(params) {
 
     let remainingQuantity = 0;
     let isOrderClosed = false;
-    for (let j = 0; j < SELL_TRACK_CLOSE_ITERATION; j++) {
+    for (let j = 0; j < iterationCount; j++) {
       if (i < 2 && getCurrentTime() > SIGNAL_SELL_DEADLINE_TIME) {
         logger.info(
           `[SELL] Current time surpassed sell deadline. We will attempt to sell everything left asap`,
@@ -141,7 +166,7 @@ async function sellChunk(params) {
           `[SELL] Stucked at AMOUNT of ${remainingQuantity} ${targetCurrency} left at rate ${rate}`,
         );
       }
-      await sleep(SELL_TRACK_CLOSE_DURATION);
+      await sleep(SELL_TRACK_CLOSE_TIMEOUT);
     }
 
     if (!isOrderClosed) {
@@ -179,7 +204,15 @@ async function sellChunk(params) {
 const BUY_TRACK_CLOSE_ITERATION = 30;
 const BUY_TRACK_CLOSE_SLEEP_DURATION = 50;
 async function trackCloseOrder(params) {
-  const { orderId, quantity, baseRate, rate, targetCurrency, market } = params;
+  const {
+    orderId,
+    quantity,
+    beforeSignalRate,
+    afterSignalRate,
+    rate,
+    targetCurrency,
+    market,
+  } = params;
 
   let remainingQuantity = quantity;
   let isOrderClosed = false;
@@ -242,7 +275,8 @@ async function trackCloseOrder(params) {
       await sellChunk({
         market,
         chunkTargetAmount: order.Quantity - order.QuantityRemaining,
-        baseRate,
+        beforeSignalRate,
+        afterSignalRate,
         buyRate: order.PricePerUnit,
         targetCurrency,
       });
@@ -255,11 +289,14 @@ async function trackCloseOrder(params) {
  *
  * @param {any} params
  */
+const BEFORE_SIGNAL_RATE_BUY_MULTIPLIER = 1.75;
+const AFTER_SIGNAL_RATE_BUY_MULTIPLIER = 1.15;
 async function buyChunk(params) {
   const {
     market,
     chunkSourceAmount,
-    initialRate,
+    beforeSignalRate,
+    afterSignalRate,
     sourceCurrency,
     targetCurrency,
   } = params;
@@ -273,8 +310,13 @@ async function buyChunk(params) {
   );
 
   // Calculate rate
-  const baseRate = initialRate;
-  const rate = floor(baseRate * BUY_RATE, CURRENCY_PRECISION);
+  const rate = floor(
+    Math.min(
+      beforeSignalRate * BEFORE_SIGNAL_RATE_BUY_MULTIPLIER,
+      afterSignalRate * AFTER_SIGNAL_RATE_BUY_MULTIPLIER,
+    ),
+    CURRENCY_PRECISION,
+  );
   const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
 
   // Make buy order
@@ -290,7 +332,8 @@ async function buyChunk(params) {
   await trackCloseOrder({
     orderId,
     quantity,
-    baseRate,
+    beforeSignalRate,
+    afterSignalRate,
     rate,
     targetCurrency,
     market,
@@ -332,14 +375,20 @@ async function runBot() {
     return;
   }
 
-  const potentialMarketSummaries = await bittrexTrack(
-    true,
-    1.175,
-    7,
-    SIGNAL_TIME,
-  );
+  // const potentialMarketSummaries = await bittrexTrack(
+  //   true,
+  //   1.225,
+  //   SIGNAL_TIME,
+  // );
+
+  const potentialMarketSummaries = await Promise.race([
+    bittrexTrackSocket(RATE, SIGNAL_TIME),
+    bittrexTrack(true, RATE, SIGNAL_TIME),
+  ]);
+
   const market = potentialMarketSummaries.summary.MarketName;
-  const sellRate = potentialMarketSummaries.oldSummary.Ask;
+  const initialSellRate = potentialMarketSummaries.oldSummary.Ask;
+  const currentSellRate = potentialMarketSummaries.summary.Ask;
 
   // Prompt from user the target currency he wants to exchange
   const { confirm: marketConfirm } = await inquirer.prompt({
@@ -361,7 +410,7 @@ async function runBot() {
     CURRENCY_PRECISION,
   );
   logger.info(
-    `[PREP] We will use ${chunkSourceAmount} ${sourceCurrency} for ${CHUNK_COUNT} chunk(s) at BASE RATE ${sellRate}`,
+    `[PREP] We will use ${chunkSourceAmount} ${sourceCurrency} for ${CHUNK_COUNT} chunk(s)`,
   );
 
   // Stop early if chunk source amount is 0
@@ -375,7 +424,8 @@ async function runBot() {
       buyChunk({
         market,
         chunkSourceAmount,
-        initialRate: sellRate,
+        beforeSignalRate: initialSellRate,
+        afterSignalRate: currentSellRate,
         sourceCurrency,
         targetCurrency,
       });

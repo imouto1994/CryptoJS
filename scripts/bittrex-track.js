@@ -2,13 +2,11 @@
 global.Promise = require("bluebird");
 
 const forEach = require("lodash/forEach");
-const Deque = require("double-ended-queue");
 const winston = require("winston");
-const moment = require("moment");
 const minimist = require("minimist");
 
 const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
-const { sleep, getCurrentTime } = require("../src/utils");
+const { sleep, getTimeInUTC } = require("../src/utils");
 
 const argv = minimist(process.argv.slice(2));
 const logger = new winston.Logger({
@@ -30,19 +28,12 @@ const logger = new winston.Logger({
   exitOnError: false,
 });
 
-async function track(
-  isSingleFind = false,
-  rate = 1.15,
-  dequeMaxLength = 7,
-  targetTime,
-) {
-  logger.info(
-    `Start tracking with rate ${rate} and deque length at ${dequeMaxLength}`,
-  );
+async function track(isSingleFind = false, rate = 1.225, targetTime) {
+  logger.info(`Start tracking with RATE ${rate}`);
 
   let iteration = 0;
-  const deque = new Deque();
   const potentialMarkets = {};
+  let oldSummariesMap;
   let potentialMarketSummaries;
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -55,51 +46,43 @@ async function track(
       }
       return map;
     }, {});
-
+    if (oldSummariesMap == null) {
+      oldSummariesMap = summariesMap;
+      continue;
+    }
     // Condition checking
-    const length = deque.length;
     forEach(summariesMap, (summary, market) => {
       if (potentialMarkets[market] == null) {
-        for (let i = 0; i < length; i++) {
-          const oldSummary = deque.get(i)[market];
-          if (oldSummary != null) {
+        const oldSummary = oldSummariesMap[market];
+        if (oldSummary != null) {
+          if (
+            summary.Last > oldSummary.Last * rate ||
+            summary.Bid > oldSummary.Bid * rate ||
+            summary.Ask > oldSummary.Ask * rate
+          ) {
+            potentialMarkets[market] = true;
+            const timeStamp = summary.TimeStamp;
+            const oldTimeStamp = oldSummary.TimeStamp;
             if (
-              summary.Last > oldSummary.LastWithRate ||
-              summary.Bid > oldSummary.BidWithRate ||
-              summary.Ask > oldSummary.AskWithRate
+              targetTime != null &&
+              getTimeInUTC(timeStamp) > targetTime &&
+              getTimeInUTC(oldTimeStamp) < targetTime
             ) {
-              potentialMarkets[market] = dequeMaxLength + 1;
               logger.info(
-                `Iteration ${iteration} - Index: ${i}\n` +
+                `Iteration ${iteration}\n` +
                   JSON.stringify(summary, null, 2) +
                   "\n" +
                   JSON.stringify(oldSummary, null, 2),
               );
-              const timestamp = summary.TimeStamp;
-              if (
-                targetTime != null &&
-                moment(`${timestamp}+0000`).valueOf() > targetTime
-              ) {
-                logger.info(`POTENTIAL MARKET: ${market}`);
-                if (isSingleFind) {
-                  potentialMarketSummaries = { summary, oldSummary };
-                  return false;
-                }
+              logger.info(`POTENTIAL MARKET: ${market}`);
+              if (isSingleFind) {
+                potentialMarketSummaries = { summary, oldSummary };
+                return false;
               }
-              break;
             }
           }
         }
-      } else {
-        potentialMarkets[market]--;
-        if (potentialMarkets[market] === 0) {
-          delete potentialMarkets[market];
-        }
       }
-
-      summary.LastWithRate = summary.Last * rate;
-      summary.BidWithRate = summary.Bid * rate;
-      summary.AskWithRate = summary.Ask * rate;
     });
 
     if (isSingleFind) {
@@ -108,11 +91,7 @@ async function track(
       }
     }
 
-    // Update Deque
-    deque.push(summariesMap);
-    if (length === dequeMaxLength) {
-      deque.shift();
-    }
+    oldSummariesMap = summariesMap;
 
     // Mark Iteration
     if (++iteration % 500 === 0) {
@@ -124,7 +103,7 @@ async function track(
 
 // Run program
 if (argv.track) {
-  track(false, 1.2);
+  track(false, 1.225);
 }
 
 module.exports = track;

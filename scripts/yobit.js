@@ -14,11 +14,7 @@ const {
 const {
   CURRENCY_BITCOIN,
   CURRENCY_PRECISION,
-  CHUNK_COUNT,
   YOBIT_COMMISSION_RATE,
-  EXCHANGE_RATE_STEP,
-  BUY_RATE,
-  SELL_RATE,
 } = require("../src/constants");
 const {
   sleep,

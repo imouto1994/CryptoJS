@@ -1,4 +1,4 @@
-const chalk = require("chalk");
+const moment = require("moment");
 
 const { EPSILON } = require("./constants");
 
@@ -36,8 +36,19 @@ function getCurrentTime() {
   return new Date().getTime();
 }
 
+/**
+ * 
+ * 
+ * @param {any} timeString 
+ * @returns 
+ */
+function getTimeInUTC(timeString) {
+  return moment(`${timeString}+0000`).valueOf();
+}
+
 module.exports = {
   isEqual,
   sleep,
   getCurrentTime,
+  getTimeInUTC,
 };
