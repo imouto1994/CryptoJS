@@ -97,7 +97,7 @@ async function track(isSingleFind = false, rate = 1.225, targetTime) {
     if (++iteration % 500 === 0) {
       logger.info(`Iteration ${iteration}`);
     }
-    await sleep(1000);
+    await sleep(500);
   }
 }
 

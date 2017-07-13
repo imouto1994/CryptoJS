@@ -46,7 +46,7 @@ const logger = new winston.Logger({
 });
 
 // Constants
-const RATE = 1.225;
+const RATE = 1.4;
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
 const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
 const SIGNAL_SELL_DEADLINE_TIME = SIGNAL_TIME + 27 * 1000;
@@ -57,13 +57,13 @@ const CHUNK_COUNT = 1;
  *
  * @param {any} params
  */
-const SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT = 35;
-const SELL_TRACK_CLOSE_SECOND_ITERATION_COUNT = 40;
+const SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT = 40;
+const SELL_TRACK_CLOSE_SECOND_ITERATION_COUNT = 35;
 const SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT = 30;
 const SELL_TRACK_CLOSE_TIMEOUT = 50;
 const BEFORE_SIGNAL_RATE_SELL_MULTIPLIER = 2.25;
 const AFTER_SIGNAL_RATE_SELL_MULTIPLIER = 1.5;
-const CURRENT_RATE_SELL_MULTIPLIER = 0.95;
+const CURRENT_RATE_SELL_MULTIPLIER = 0.925;
 async function sellChunk(params) {
   const {
     market,
