@@ -52,12 +52,9 @@ const tradeLogger = new winston.Logger({
 
 // Constants
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
-const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 13 * 1000;
+const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 14 * 1000;
 const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 16 * 1000;
 const CHUNK_COUNT = 1;
-const DEQUE_LENGTH = 15;
-const POTENTIAL_LIMIT = 20;
-const PREBUMP_LIMIT = 15;
 
 /**
  *
@@ -82,6 +79,9 @@ function waitTill(targetTime) {
  * @returns
  */
 let MARKETS_MAP = {};
+const DEQUE_LENGTH = 10;
+const POTENTIAL_LIMIT = 20;
+const PREBUMP_LIMIT = 15;
 function socketTrack(targetTime = SIGNAL_TIME) {
   return new Promise(async (resolve, reject) => {
     const summaries = await getMarketSummaries();
@@ -183,7 +183,12 @@ function socketTrack(targetTime = SIGNAL_TIME) {
  * @returns
  */
 function getMaxFillRate(market) {
-  let i = -1;
+  const deque = MARKETS_MAP[market];
+  let i = deque.length - 1;
+  if (i < 0) {
+    return null;
+  }
+
   do {
     const latestMarketUpdate = MARKETS_MAP[market].get(i);
     const { Fills: fills, Buys: buys } = latestMarketUpdate;
@@ -194,7 +199,7 @@ function getMaxFillRate(market) {
       return buys.reduce((max, buy) => Math.max(max, buy.Rate), 0);
     }
     i--;
-  } while (MARKETS_MAP[market].get(i) != null);
+  } while (i >= 0);
 
   return null;
 }
@@ -222,20 +227,23 @@ async function sellChunk(params) {
   for (let i = 0; i < 5; i++) {
     // Calculate rate
     let rate;
+    const maxFillRate = getMaxFillRate(market);
+    if (maxFillRate == null || maxFillRate === 0) {
+      tradeLogger.error("[SELL] Invalid sell rate!!!");
+      await sleep(1500);
+      continue;
+    }
     if (i === 0) {
-      const maxFillRate = getMaxFillRate(market);
       rate = floor(
         maxFillRate * (1 - SELL_RATE_STEP_FIRST_ITERATION),
         CURRENCY_PRECISION,
       );
     } else if (i === 1) {
-      const maxFillRate = getMaxFillRate(market);
       rate = floor(
         maxFillRate * (1 - SELL_RATE_STEP_SECOND_ITERATION),
         CURRENCY_PRECISION,
       );
     } else {
-      const maxFillRate = getMaxFillRate(market);
       rate = floor(
         maxFillRate * (1 - SELL_RATE_STEP_OTHERS_ITERATION),
         CURRENCY_PRECISION,
@@ -347,6 +355,10 @@ async function buyChunk(params) {
     (min, fill) => Math.min(min, fill.Rate),
     Infinity,
   );
+  if (minFillRate == null || minFillRate > 1) {
+    tradeLogger.info(`[BUY] Invalid Buy Rate!!!`);
+    return;
+  }
   const rate = floor(minFillRate * (1 + BUY_RATE_STEP), CURRENCY_PRECISION);
   const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
 
