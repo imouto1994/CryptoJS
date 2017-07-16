@@ -69,7 +69,7 @@ function waitTill(targetTime) {
         resolve();
         clearInterval(intervalId);
       }
-    }, 50);
+    }, 100);
   });
 }
 
@@ -220,7 +220,7 @@ async function sellChunk(params) {
 
   // Wait till time to start to sell
   if (getCurrentTime() < SIGNAL_SELL_START_TIME) {
-    tradeLogger.info("[SELL] Waill till best time to sell");
+    tradeLogger.info("[SELL] Wait till best time to sell");
     await waitTill(SIGNAL_SELL_START_TIME);
   }
 
@@ -230,7 +230,7 @@ async function sellChunk(params) {
     const maxFillRate = getMaxFillRate(market);
     if (maxFillRate == null || maxFillRate === 0) {
       tradeLogger.error("[SELL] Invalid sell rate!!!");
-      await sleep(1500);
+      await sleep(1000);
       continue;
     }
     if (i === 0) {
