@@ -49,38 +49,32 @@ const tradeLogger = new winston.Logger({
   ],
   exitOnError: false,
 });
-const trackConsoleLogger = new winston.Logger({
-  transports: [
-    new winston.transports.Console({
-      timestamp() {
-        return new Date().toLocaleString();
-      },
-      colorize: true,
-    }),
-  ],
-  exitOnError: false,
-});
-const trackFileLogger = new winston.Logger({
-  transports: [
-    new winston.transports.File({
-      filename: `logs/bittrex-track-orders-socket-${new Date().toLocaleString()}.log`,
-      json: false,
-      timestamp() {
-        return new Date().toLocaleString();
-      },
-    }),
-  ],
-  exitOnError: false,
-});
 
 // Constants
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
-const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
-const SIGNAL_SELL_DEADLINE_TIME = SIGNAL_TIME + 30 * 1000;
+const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 13 * 1000;
+const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 16 * 1000;
 const CHUNK_COUNT = 1;
 const DEQUE_LENGTH = 15;
 const POTENTIAL_LIMIT = 20;
 const PREBUMP_LIMIT = 15;
+
+/**
+ *
+ *
+ * @param {any} targetTime
+ * @returns
+ */
+function waitTill(targetTime) {
+  return new Promise(resolve => {
+    const intervalId = setInterval(() => {
+      if (getCurrentTime() > targetTime) {
+        resolve();
+        clearInterval(intervalId);
+      }
+    }, 50);
+  });
+}
 
 /**
  * Track orders through WebSocket
@@ -90,7 +84,6 @@ const PREBUMP_LIMIT = 15;
 let MARKETS_MAP = {};
 function socketTrack(targetTime = SIGNAL_TIME) {
   return new Promise(async (resolve, reject) => {
-    trackConsoleLogger.info(`Start tracking orders through socket`);
     const summaries = await getMarketSummaries();
     const markets = summaries
       .map(summary => summary.MarketName)
@@ -100,7 +93,6 @@ function socketTrack(targetTime = SIGNAL_TIME) {
       return map;
     }, {});
     let potentialMarkets = {};
-    let potentialMarketAfterSignal;
 
     /**
      *
@@ -113,18 +105,10 @@ function socketTrack(targetTime = SIGNAL_TIME) {
         const marketDelta = frame.A[0];
         const { MarketName: marketName } = marketDelta;
 
-        // Stop collecting data for other markets after we get the potential market after signal
-        if (potentialMarketAfterSignal != null) {
-          if (marketName !== potentialMarketAfterSignal) {
-            return;
-          }
-        }
-        // Log market update
-        trackFileLogger.info(JSON.stringify(frame.A[0]));
-
         // Update double-ended queue of market updates for this market
+        const currentTime = getCurrentTime();
         const deque = MARKETS_MAP[marketName];
-        deque.push(Object.assign(marketDelta, { TimeStamp: getCurrentTime() }));
+        deque.push(Object.assign(marketDelta, { TimeStamp: currentTime }));
         if (deque.length > DEQUE_LENGTH) {
           deque.shift();
         }
@@ -147,33 +131,42 @@ function socketTrack(targetTime = SIGNAL_TIME) {
         let fillsBeforeSignalCount = 0;
 
         // Check all fill's timestamps if they were before the signal
-        forEach(marketDelta.Fills, fill => {
-          if (getTimeInUTC(fill.TimeStamp) < targetTime) {
-            fillsBeforeSignalCount++;
-          }
-        });
-        if (fillsBeforeSignalCount > 0.75 * marketDelta.Fills.length) {
+        if (currentTime < targetTime) {
           isPotentialMarketAfterSignal = false;
+        } else {
+          forEach(marketDelta.Fills, fill => {
+            if (getTimeInUTC(fill.TimeStamp) < targetTime) {
+              fillsBeforeSignalCount++;
+            }
+          });
+          if (fillsBeforeSignalCount > 0.75 * marketDelta.Fills.length) {
+            isPotentialMarketAfterSignal = false;
+          }
         }
 
         // Check if there is a prebump before signal or not
         for (let i = deque.length - 2; i >= 0; i--) {
           const marketUpdate = deque.get(i);
-          if (
-            marketUpdate.Fills.length > PREBUMP_LIMIT &&
-            marketUpdate.TimeStamp < targetTime
-          ) {
-            hasBumpedMarketBeforeSignal = true;
-            break;
+          if (marketUpdate.Fills.length > PREBUMP_LIMIT) {
+            if (marketUpdate.TimeStamp < targetTime) {
+              hasBumpedMarketBeforeSignal = true;
+              break;
+            }
+            let counter = 0;
+            forEach(marketUpdate.Fills, fill => {
+              if (getTimeInUTC(fill.TimeStamp) < targetTime) {
+                counter++;
+              }
+            });
+            if (counter > 0.75 * marketUpdate.Fills.length) {
+              hasBumpedMarketBeforeSignal = true;
+              break;
+            }
           }
         }
 
         // If the two conditions are met, then this is a potential market after the signal
         if (isPotentialMarketAfterSignal && !hasBumpedMarketBeforeSignal) {
-          const potentialMessage = `POTENTIAL MARKET: ${marketName}`;
-          trackFileLogger.info(potentialMessage);
-          trackConsoleLogger.info(potentialMessage);
-          potentialMarketAfterSignal = marketName;
           resolve(marketName);
         }
       }
@@ -186,51 +179,63 @@ function socketTrack(targetTime = SIGNAL_TIME) {
 /**
  *
  *
+ * @param {any} market
+ * @returns
+ */
+function getMaxFillRate(market) {
+  let i = -1;
+  do {
+    const latestMarketUpdate = MARKETS_MAP[market].get(i);
+    const { Fills: fills, Buys: buys } = latestMarketUpdate;
+    if (fills.length > 0) {
+      return fills.reduce((max, fill) => Math.max(max, fill.Rate), 0);
+    }
+    if (buys.length > 0) {
+      return buys.reduce((max, buy) => Math.max(max, buy.Rate), 0);
+    }
+    i--;
+  } while (MARKETS_MAP[market].get(i) != null);
+
+  return null;
+}
+
+/**
+ *
+ *
  * @param {any} params
  */
-const SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT = 35;
-const SELL_RATE_STEP_FIRST_ITERATION = 0.15;
-const SELL_TRACK_CLOSE_SECOND_ITERATION_COUNT = 30;
-const SELL_RATE_STEP_SECOND_ITERATION = 0.05;
-const SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT = 25;
+const SELL_TRACK_CLOSE_ITERATION_COUNT = 30;
+const SELL_RATE_STEP_FIRST_ITERATION = 0.05;
+const SELL_RATE_STEP_SECOND_ITERATION = 0.075;
 const SELL_RATE_STEP_OTHERS_ITERATION = 0.1;
 const SELL_TRACK_CLOSE_TIMEOUT = 50;
 async function sellChunk(params) {
   const { market, chunkTargetAmount, targetCurrency } = params;
-
   let quantity = chunkTargetAmount;
-  let shouldSellAsap = false;
+
+  // Wait till time to start to sell
+  if (getCurrentTime() < SIGNAL_SELL_START_TIME) {
+    tradeLogger.info("[SELL] Waill till best time to sell");
+    await waitTill(SIGNAL_SELL_START_TIME);
+  }
+
   for (let i = 0; i < 5; i++) {
     // Calculate rate
     let rate;
-    let iterationCount;
-    const latestMarketUpdate = MARKETS_MAP[market].peekBack();
-    if (!shouldSellAsap && i === 0) {
-      const maxFillRate = latestMarketUpdate.Fills.reduce(
-        (max, fill) => Math.max(max, fill.Rate),
-        0,
-      );
-      iterationCount = SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT;
+    if (i === 0) {
+      const maxFillRate = getMaxFillRate(market);
       rate = floor(
-        maxFillRate * (1 + SELL_RATE_STEP_FIRST_ITERATION),
+        maxFillRate * (1 - SELL_RATE_STEP_FIRST_ITERATION),
         CURRENCY_PRECISION,
       );
-    } else if (!shouldSellAsap && i === 1) {
-      const maxFillRate = latestMarketUpdate.Fills.reduce(
-        (max, fill) => Math.max(max, fill.Rate),
-        0,
-      );
-      iterationCount = SELL_TRACK_CLOSE_SECOND_ITERATION_COUNT;
+    } else if (i === 1) {
+      const maxFillRate = getMaxFillRate(market);
       rate = floor(
         maxFillRate * (1 - SELL_RATE_STEP_SECOND_ITERATION),
         CURRENCY_PRECISION,
       );
     } else {
-      const maxFillRate = latestMarketUpdate.Fills.reduce(
-        (max, fill) => Math.max(max, fill.Rate),
-        0,
-      );
-      iterationCount = SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT;
+      const maxFillRate = getMaxFillRate(market);
       rate = floor(
         maxFillRate * (1 - SELL_RATE_STEP_OTHERS_ITERATION),
         CURRENCY_PRECISION,
@@ -260,14 +265,7 @@ async function sellChunk(params) {
 
     let remainingQuantity = 0;
     let isOrderClosed = false;
-    for (let j = 0; j < iterationCount; j++) {
-      if (i < 2 && getCurrentTime() > SIGNAL_SELL_DEADLINE_TIME) {
-        tradeLogger.info(
-          `[SELL] Current time surpassed sell deadline. We will attempt to sell everything left asap`,
-        );
-        shouldSellAsap = true;
-        break;
-      }
+    for (let j = 0; j < SELL_TRACK_CLOSE_ITERATION_COUNT; j++) {
       tradeLogger.info(
         `[SELL] Fetch information for order ${orderId} for ${j + 1} times`,
       );
@@ -331,7 +329,7 @@ async function sellChunk(params) {
  */
 const BUY_RATE_STEP = 0.1;
 const BUY_TRACK_CLOSE_ITERATION = 40;
-const BUY_TRACK_CLOSE_SLEEP_DURATION = 100;
+const BUY_TRACK_CLOSE_TIMEOUT = 50;
 async function buyChunk(params) {
   const { market, chunkSourceAmount, sourceCurrency, targetCurrency } = params;
 
@@ -397,8 +395,9 @@ async function buyChunk(params) {
         `[BUY] Stucked at ${remainingQuantity} ${targetCurrency} left at RATE ${rate}`,
       );
     }
-    await sleep(BUY_TRACK_CLOSE_SLEEP_DURATION);
+    await sleep(BUY_TRACK_CLOSE_TIMEOUT);
   }
+
   if (!isOrderClosed) {
     // Cancel order
     try {
@@ -433,8 +432,7 @@ async function buyChunk(params) {
 }
 
 /**
- *
- *
+ * Main Trade Program
  */
 async function main() {
   // Define source currency
@@ -467,17 +465,19 @@ async function main() {
   }
 
   // Track orders and get potential market through WebSocket
-  const market = await socketTrack(SIGNAL_TIME);
+  const potentialMarket = await socketTrack(SIGNAL_TIME);
 
   // Prompt to confirm the potential market to exchange
   const { confirm: marketConfirm } = await inquirer.prompt({
-    type: "confirm",
+    type: "input",
     name: "confirm",
-    message: `One potential market is ${market}. Do you want to proceed?`,
+    message: `One potential market is ${potentialMarket}. Do you want to proceed or choose another market?`,
   });
-  if (!marketConfirm) {
-    tradeLogger.error("[PREP] Woops! Guess we are gonna miss this time :(");
-    return;
+  let market;
+  if (marketConfirm.trim().length === 0) {
+    market = potentialMarket;
+  } else {
+    market = `${sourceCurrency}-${marketConfirm.trim().toUpperCase()}`;
   }
 
   // Define target currency & corresponding market
