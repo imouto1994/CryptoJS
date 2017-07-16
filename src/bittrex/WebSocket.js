@@ -35,7 +35,9 @@ function setWebSocketMessageReceived(callback) {
       } else {
         callback({ unhandledFrame: frame });
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error("Failed to parse JSON data");
+    }
   };
 }
 
@@ -47,9 +49,7 @@ function setConnectedWebSocket(markets = []) {
         "SubscribeToExchangeDeltas",
         market,
       ).done(function(err, result) {
-        if (err == null) {
-          console.log(`Subscribed to ${market}`);
-        } else {
+        if (err != null) {
           console.error(`Failed to subscribe to ${market}`);
         }
       });

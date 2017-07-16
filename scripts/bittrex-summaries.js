@@ -8,7 +8,7 @@ const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
 const { sleep } = require("../src/utils");
 
 const argv = minimist(process.argv.slice(2));
-const logger = new winston.Logger({
+const consoleLogger = new winston.Logger({
   transports: [
     new winston.transports.Console({
       timestamp() {
@@ -16,6 +16,11 @@ const logger = new winston.Logger({
       },
       colorize: true,
     }),
+  ],
+  exitOnError: false,
+});
+const fileLogger = new winston.Logger({
+  transports: [
     new winston.transports.File({
       filename: `logs/bittrex-summaries-${new Date().toLocaleString()}.log`,
       json: false,
@@ -32,13 +37,13 @@ const logger = new winston.Logger({
  * 
  */
 async function summaries() {
-  logger.info("Start logging summaries for Bittrex...");
+  consoleLogger.info("Start logging summaries for Bittrex...");
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const summaries = await getMarketSummaries();
-    logger.info(`\n${JSON.stringify(summaries, null, 2)}`);
-    await sleep(1000);
+    fileLogger.info(JSON.stringify(summaries));
+    await sleep(500);
   }
 }
 

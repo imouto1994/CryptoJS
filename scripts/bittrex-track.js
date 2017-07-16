@@ -9,7 +9,7 @@ const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
 const { sleep, getTimeInUTC } = require("../src/utils");
 
 const argv = minimist(process.argv.slice(2));
-const logger = new winston.Logger({
+const consoleLogger = new winston.Logger({
   transports: [
     new winston.transports.Console({
       timestamp() {
@@ -17,6 +17,11 @@ const logger = new winston.Logger({
       },
       colorize: true,
     }),
+  ],
+  exitOnError: false,
+});
+const fileLogger = new winston.Logger({
+  transports: [
     new winston.transports.File({
       filename: `logs/bittrex-track-${new Date().toLocaleString()}.log`,
       json: false,
@@ -28,8 +33,8 @@ const logger = new winston.Logger({
   exitOnError: false,
 });
 
-async function track(isSingleFind = false, rate = 1.225, targetTime) {
-  logger.info(`Start tracking with RATE ${rate}`);
+async function track(isSingleFind = false, rate = 1.4, targetTime) {
+  consoleLogger.info(`Start tracking with RATE ${rate}`);
 
   let iteration = 0;
   const potentialMarkets = {};
@@ -68,13 +73,10 @@ async function track(isSingleFind = false, rate = 1.225, targetTime) {
               getTimeInUTC(timeStamp) > targetTime &&
               getTimeInUTC(oldTimeStamp) < targetTime
             ) {
-              logger.info(
-                `Iteration ${iteration}\n` +
-                  JSON.stringify(summary, null, 2) +
-                  "\n" +
-                  JSON.stringify(oldSummary, null, 2),
-              );
-              logger.info(`POTENTIAL MARKET: ${market}`);
+              fileLogger.info(JSON.stringify(summary));
+              const potentialMessage = `POTENTIAL MARKET: ${market}`;
+              fileLogger.info(potentialMessage);
+              consoleLogger.info(potentialMessage);
               if (isSingleFind) {
                 potentialMarketSummaries = { summary, oldSummary };
                 return false;
@@ -95,7 +97,7 @@ async function track(isSingleFind = false, rate = 1.225, targetTime) {
 
     // Mark Iteration
     if (++iteration % 500 === 0) {
-      logger.info(`Iteration ${iteration}`);
+      consoleLogger.info(`Iteration ${iteration}`);
     }
     await sleep(500);
   }
@@ -103,7 +105,7 @@ async function track(isSingleFind = false, rate = 1.225, targetTime) {
 
 // Run program
 if (argv.track) {
-  track(false, 1.225);
+  track(false, 1.4);
 }
 
 module.exports = track;

@@ -5,9 +5,9 @@ const forEach = require("lodash/forEach");
 
 const { getTimeInUTC } = require("../src/utils");
 
-const RATE = 1.2;
-const LOG_FILE_NAME = "bittrex-summaries-2017-7-12 23:59:08.log";
-const TARGET_SIGNAL_TIME = moment("07-12 16:00 +0000", "MM-DD HH:mm Z")
+const RATE = 1.3;
+const LOG_FILE_NAME = "bittrex-summaries-2017-7-13 23:59:02.log";
+const TARGET_SIGNAL_TIME = moment("07-13 16:00 +0000", "MM-DD HH:mm Z")
   .toDate()
   .getTime();
 

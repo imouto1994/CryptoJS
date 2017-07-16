@@ -10,7 +10,7 @@ const WebSocket = require("../src/bittrex/WebSocket");
 const { getTimeInUTC } = require("../src/utils");
 
 const argv = minimist(process.argv.slice(2));
-const logger = new winston.Logger({
+const consoleLogger = new winston.Logger({
   transports: [
     new winston.transports.Console({
       timestamp() {
@@ -18,6 +18,11 @@ const logger = new winston.Logger({
       },
       colorize: true,
     }),
+  ],
+  exitOnError: false,
+});
+const fileLogger = new winston.Logger({
+  transports: [
     new winston.transports.File({
       filename: `logs/bittrex-track-socket-${new Date().toLocaleString()}.log`,
       json: false,
@@ -32,9 +37,9 @@ const DEFAULT_UPCOMING_SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z")
   .toDate()
   .getTime();
 
-function socketTrack(rate = 1.225, targetTime = DEFAULT_UPCOMING_SIGNAL_TIME) {
+function socketTrack(rate = 1.4, targetTime = DEFAULT_UPCOMING_SIGNAL_TIME) {
   return new Promise(async (resolve, reject) => {
-    logger.info(`Start tracking through socket with RATE ${rate}`);
+    consoleLogger.info(`Start tracking through socket with RATE ${rate}`);
     const summaries = await getMarketSummaries();
     const marketsMap = summaries.reduce((map, summary) => {
       map[summary.MarketName] = summary;
@@ -54,6 +59,7 @@ function socketTrack(rate = 1.225, targetTime = DEFAULT_UPCOMING_SIGNAL_TIME) {
             const { MarketName: marketName } = marketDelta;
             const summary = marketDelta;
             const oldSummary = marketsMap[marketName];
+            fileLogger.info(JSON.stringify(summary));
             if (
               summary.Last > oldSummary.Last * rate ||
               summary.Bid > oldSummary.Bid * rate ||
@@ -65,13 +71,9 @@ function socketTrack(rate = 1.225, targetTime = DEFAULT_UPCOMING_SIGNAL_TIME) {
                 const oldTimeStamp = getTimeInUTC(oldSummary.TimeStamp);
 
                 if (timeStamp > targetTime && oldTimeStamp < targetTime) {
-                  logger.info(
-                    "\n" +
-                      JSON.stringify(summary, null, 2) +
-                      "\n" +
-                      JSON.stringify(oldSummary, null, 2),
-                  );
-                  logger.info(`POTENTIAL MARKET: ${marketName}`);
+                  const potentialMessage = `POTENTIAL MARKET: ${marketName}`;
+                  consoleLogger.info(potentialMessage);
+                  fileLogger.info(potentialMessage);
                   resolve({ summary, oldSummary });
                   hasFoundSignal = true;
                 }
@@ -89,7 +91,7 @@ function socketTrack(rate = 1.225, targetTime = DEFAULT_UPCOMING_SIGNAL_TIME) {
 
 // Run program
 if (argv.track) {
-  socketTrack(1.225);
+  socketTrack(1.4);
 }
 
 module.exports = socketTrack;
