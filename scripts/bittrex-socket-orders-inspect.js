@@ -5,8 +5,8 @@ const forEach = require("lodash/forEach");
 
 const { getTimeInUTC } = require("../src/utils");
 
-const LOG_FILE_NAME = "bittrex-track-orders-socket-2017-7-14 23:49:48.log";
-const TARGET_SIGNAL_TIME = moment("07-14 16:00 +0000", "MM-DD HH:mm Z")
+const LOG_FILE_NAME = "bittrex-track-orders-socket-2017-7-16 23:50:25.log";
+const TARGET_SIGNAL_TIME = moment("07-16 16:00 +0000", "MM-DD HH:mm Z")
   .toDate()
   .getTime();
 
@@ -31,7 +31,7 @@ fs.readFile(
       map[marketName].push(update);
       return map;
     }, {});
-    forEach(marketUpdates["BTC-EFL"], update => {
+    forEach(marketUpdates["BTC-VRM"], update => {
       // if (update.Fills.length > 20) {
       //   console.log(
       //     "Market",
@@ -46,9 +46,13 @@ fs.readFile(
       //     update.Fills.length,
       //   );
       // }
-      if (update.TimeStamp > TARGET_SIGNAL_TIME + 60 * 1000) {
+      if (
+        update.TimeStamp > TARGET_SIGNAL_TIME + 60 * 1000 ||
+        update.TimeStamp < TARGET_SIGNAL_TIME - 60 * 1000
+      ) {
         return;
       }
+      console.log("-------------------------");
       console.log(
         "Market",
         update.MarketName,
@@ -61,13 +65,8 @@ fs.readFile(
         "FILLS",
         update.Fills.length,
       );
-      console.log("-------------------------");
       forEach(update.Fills, fill => console.log(JSON.stringify(fill)));
       console.log("-------------------------");
-      forEach(update.Buys, buy => console.log(JSON.stringify(buy)));
-      console.log("-------------------------");
-      forEach(update.Sells, sell => console.log(JSON.stringify(sell)));
-      console.log();
     });
   },
 );
