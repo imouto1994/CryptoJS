@@ -3,8 +3,6 @@ const fs = require("fs");
 const moment = require("moment");
 const forEach = require("lodash/forEach");
 
-const { getTimeInUTC } = require("../src/utils");
-
 const LOG_FILE_NAME = "bittrex-track-orders-socket-2017-7-16 23:50:25.log";
 const TARGET_SIGNAL_TIME = moment("07-16 16:00 +0000", "MM-DD HH:mm Z")
   .toDate()
@@ -32,20 +30,6 @@ fs.readFile(
       return map;
     }, {});
     forEach(marketUpdates["BTC-VRM"], update => {
-      // if (update.Fills.length > 20) {
-      //   console.log(
-      //     "Market",
-      //     update.MarketName,
-      //     "TIME",
-      //     new Date(update.TimeStamp).toLocaleString(),
-      //     "BUYS",
-      //     update.Buys.length,
-      //     "SELLS",
-      //     update.Sells.length,
-      //     "FILLS",
-      //     update.Fills.length,
-      //   );
-      // }
       if (
         update.TimeStamp > TARGET_SIGNAL_TIME + 60 * 1000 ||
         update.TimeStamp < TARGET_SIGNAL_TIME - 60 * 1000

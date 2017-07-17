@@ -11,12 +11,11 @@
     "precommit": "lint-staged",
     "bittrex-trade-orders": "node scripts/bittrex-trade-orders.js",
     "bittrex-trade-summaries": "node scripts/bittrex-trade-summaries.js",
-    "bittrex-track": "node scripts/bittrex-track.js --track",
+    "bittrex-track-summaries": "node scripts/bittrex-track-summaries.js --track",
     "bittrex-track-socket": "node scripts/bittrex-track-socket.js --track",
     "bittrex-track-orders-socket": "node scripts/bittrex-track-orders-socket.js --track",
     "bittrex-summaries": "node scripts/bittrex-summaries.js --summaries",
-    "yobit": "node scripts/yobit.js",
-    "yobit-track": "node scripts/yobit-track.js",
+    "yobit-track-summaries": "node scripts/yobit-track-summaries.js",
     "yobit-summaries": "node scripts/yobit-summaries.js"
   },
   "lint-staged": {
