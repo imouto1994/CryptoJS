@@ -31,7 +31,7 @@ fs.readFile(
     }, {});
     forEach(marketUpdates["BTC-VRM"], update => {
       if (
-        update.TimeStamp > TARGET_SIGNAL_TIME + 60 * 1000 ||
+        update.TimeStamp > TARGET_SIGNAL_TIME + 180 * 1000 ||
         update.TimeStamp < TARGET_SIGNAL_TIME - 60 * 1000
       ) {
         return;

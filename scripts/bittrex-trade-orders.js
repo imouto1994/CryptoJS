@@ -53,13 +53,13 @@ const tradeLogger = new winston.Logger({
 // Constants
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
 const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
-const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 25 * 1000;
+const SIGNAL_SELL_START_TIME_FIRST_ROUND = SIGNAL_TIME + 20 * 1000;
+const SIGNAL_SELL_START_TIME_OTHERS_ROUND = SIGNAL_TIME + 30 * 1000;
 const CHUNK_COUNT = 1;
 
 /**
- *
- *
- * @param {any} targetTime
+ * Wait till the indicated time is met
+ * @param {Number} targetTime
  * @returns
  */
 function waitTill(targetTime) {
@@ -75,7 +75,7 @@ function waitTill(targetTime) {
 
 /**
  * Track orders through WebSocket
- * @param {any} [targetTime=SIGNAL_TIME]
+ * @param {Number} [targetTime=SIGNAL_TIME]
  * @returns
  */
 let MARKETS_MAP = {};
@@ -96,9 +96,8 @@ function socketTrack(targetTime = SIGNAL_TIME) {
 
     /**
      *
-     *
-     * @param {any} frame
-     * @returns
+     * Handler for each socket frame
+     * @param {Object} frame
      */
     function frameHandler(frame) {
       if (frame.M === "updateExchangeState") {
@@ -177,10 +176,10 @@ function socketTrack(targetTime = SIGNAL_TIME) {
 }
 
 /**
+ * Get maximum rate which has been filled or bought from the most recent valid market update
  *
- *
- * @param {any} market
- * @returns
+ * @param {String} market
+ * @returns {Number}
  */
 function getMaxFillRate(market) {
   const deque = MARKETS_MAP[market];
@@ -204,46 +203,65 @@ function getMaxFillRate(market) {
   return null;
 }
 
-/**
- *
- *
- * @param {any} params
- */
-const SELL_TRACK_CLOSE_ITERATION_COUNT = 30;
+const SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT = 40;
+const SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT = 30;
 const SELL_RATE_STEP_FIRST_ITERATION = 0.05;
-const SELL_RATE_STEP_SECOND_ITERATION = 0.075;
+const SELL_RATE_STEP_SECOND_ITERATION = 0.05;
 const SELL_RATE_STEP_OTHERS_ITERATION = 0.1;
 const SELL_TRACK_CLOSE_TIMEOUT = 50;
+/**
+ * Make sell order by chunk
+ *
+ * @param {Object} params
+ */
 async function sellChunk(params) {
   const { market, chunkTargetAmount, targetCurrency } = params;
   let quantity = chunkTargetAmount;
 
-  // Wait till time to start to sell
-  if (getCurrentTime() < SIGNAL_SELL_START_TIME) {
-    tradeLogger.info("[SELL] Wait till best time to sell");
-    await waitTill(SIGNAL_SELL_START_TIME);
-  }
-
   for (let i = 0; i < 5; i++) {
-    // Calculate rate
-    let rate;
+    // Wait till best time to start selling
+    if (i === 0) {
+      if (getCurrentTime() < SIGNAL_SELL_START_TIME_FIRST_ROUND) {
+        tradeLogger.info(
+          "[SELL] Wait till best time to sell for 1st iteration",
+        );
+        await waitTill(SIGNAL_SELL_START_TIME_FIRST_ROUND);
+      }
+    } else if (i >= 1) {
+      if (getCurrentTime() < SIGNAL_SELL_START_TIME_OTHERS_ROUND) {
+        tradeLogger.info(
+          "[SELL] Wait till best time to sell for 2nd iteration onwards",
+        );
+        await waitTill(SIGNAL_SELL_START_TIME_OTHERS_ROUND);
+      }
+    }
+
     const maxFillRate = getMaxFillRate(market);
+
+    // Invalid max fill rate
     if (maxFillRate == null || maxFillRate === 0) {
       tradeLogger.error("[SELL] Invalid sell rate!!!");
       await sleep(1000);
       continue;
     }
+
+    // Calculate rate
+    let rate;
+    let iterationCount;
     if (i === 0) {
+      iterationCount = SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT;
       rate = floor(
-        maxFillRate * (1 - SELL_RATE_STEP_FIRST_ITERATION),
+        maxFillRate * (1 + SELL_RATE_STEP_FIRST_ITERATION),
         CURRENCY_PRECISION,
       );
     } else if (i === 1) {
+      iterationCount = SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT;
       rate = floor(
         maxFillRate * (1 - SELL_RATE_STEP_SECOND_ITERATION),
         CURRENCY_PRECISION,
       );
     } else {
+      iterationCount = SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT;
       rate = floor(
         maxFillRate * (1 - SELL_RATE_STEP_OTHERS_ITERATION),
         CURRENCY_PRECISION,
@@ -273,7 +291,16 @@ async function sellChunk(params) {
 
     let remainingQuantity = 0;
     let isOrderClosed = false;
-    for (let j = 0; j < SELL_TRACK_CLOSE_ITERATION_COUNT; j++) {
+    for (let j = 0; j < iterationCount; j++) {
+      if (i === 0) {
+        if (getCurrentTime() > SIGNAL_SELL_START_TIME_OTHERS_ROUND) {
+          tradeLogger.warn(
+            `[SELL] Takes too long for selling in 1st iteration. We will move forward to 2nd iteration`,
+          );
+          break;
+        }
+      }
+
       tradeLogger.info(
         `[SELL] Fetch information for order ${orderId} for ${j + 1} times`,
       );
@@ -320,6 +347,8 @@ async function sellChunk(params) {
       }
     }
 
+    // If order is closed, check the remaining quantity from order to see
+    // if we need to continue selling
     if (isOrderClosed) {
       const order = await getAccountOrder(orderId);
       if (order.QuantityRemaining === 0) {
@@ -331,13 +360,13 @@ async function sellChunk(params) {
   }
 }
 
-/**
- * Buy chunks
- * @param {any} params
- */
 const BUY_RATE_STEP = 0.1;
 const BUY_TRACK_CLOSE_ITERATION = 40;
 const BUY_TRACK_CLOSE_TIMEOUT = 50;
+/**
+ * Make buy order by chunks
+ * @param {Object} params
+ */
 async function buyChunk(params) {
   const { market, chunkSourceAmount, sourceCurrency, targetCurrency } = params;
 
@@ -360,6 +389,8 @@ async function buyChunk(params) {
     return;
   }
   const rate = floor(minFillRate * (1 + BUY_RATE_STEP), CURRENCY_PRECISION);
+
+  // Calculate quantity to buy
   const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
 
   // Make buy order
@@ -459,6 +490,7 @@ async function main() {
       `Your current ${sourceCurrency} balance is ${balance.Available} ${sourceCurrency}. ` +
       `How much ${sourceCurrency} do you want to use?`,
   });
+
   const sourceAmount = parseFloat(amount.trim());
   if (isNaN(sourceAmount)) {
     tradeLogger.error("[PREP] Source amount is not defined");
