@@ -81,7 +81,7 @@ function waitTill(targetTime) {
 let MARKETS_MAP = {};
 const DEQUE_LENGTH = 10;
 const POTENTIAL_LIMIT = 20;
-const PREBUMP_LIMIT = 15;
+const PREBUMP_LIMIT = 12;
 function socketTrack(targetTime = SIGNAL_TIME) {
   return new Promise(async (resolve, reject) => {
     const summaries = await getMarketSummaries();
@@ -302,7 +302,7 @@ async function sellChunk(params) {
       }
 
       tradeLogger.info(
-        `[SELL] Fetch information for order ${orderId} for ${j + 1} times`,
+        `[SELL] Fetch information for order ${orderId} for ${j + 1} time(s)`,
       );
       const order = await getAccountOrder(orderId);
       const {
