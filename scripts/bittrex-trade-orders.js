@@ -7,6 +7,10 @@ const moment = require("moment");
 const Deque = require("double-ended-queue");
 const forEach = require("lodash/forEach");
 const floor = require("lodash/floor");
+const mean = require("lodash/mean");
+const uniq = require("lodash/uniq");
+const map = require("lodash/map");
+const max = require("lodash/max");
 
 const { getMarketSummaries } = require("../src/bittrex/ApiPublic");
 const {
@@ -50,11 +54,11 @@ const tradeLogger = new winston.Logger({
   exitOnError: false,
 });
 
-// Constants
+/* GENERAL CONSTANTS */
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
-const SIGNAL_BUY_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
-const SIGNAL_SELL_START_TIME_FIRST_ROUND = SIGNAL_TIME + 20 * 1000;
-const SIGNAL_SELL_START_TIME_OTHERS_ROUND = SIGNAL_TIME + 30 * 1000;
+const SIGNAL_BUY_START_DEADLINE_TIME = SIGNAL_TIME + 5 * 1000;
+const SIGNAL_BUY_END_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
+const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 30 * 1000;
 const CHUNK_COUNT = 1;
 
 /**
@@ -175,95 +179,107 @@ function socketTrack(targetTime = SIGNAL_TIME) {
   });
 }
 
+/* SELL CONSTANTS */
+const SELL_TRACK_CLOSE_ITERATION_COUNT = 35;
+const SELL_RATE_STEP_FIRST_ITERATION = 0;
+const SELL_RATE_STEP_SECOND_ITERATION = 0;
+const SELL_RATE_STEP_THIRD_ITERATION = 0.05;
+const SELL_RATE_STEP_OTHERS_ITERATION = 0.1;
+const SELL_TRACK_CLOSE_TIMEOUT = 50;
+
 /**
  * Get maximum rate which has been filled or bought from the most recent valid market update
  *
  * @param {String} market
- * @returns {Number}
+ * @returns {Number?}
  */
-function getMaxFillRate(market) {
+function getBaseRateForSell(market, buyRate, iterationCounter) {
+  // Determine length of `maxRateList`
+  let maxRateListLength;
+  if (iterationCounter === 0) {
+    maxRateListLength = 5;
+  } else if (iterationCounter === 1) {
+    maxRateListLength = 3;
+  } else {
+    maxRateListLength = 1;
+  }
+
   const deque = MARKETS_MAP[market];
   let i = deque.length - 1;
   if (i < 0) {
     return null;
   }
 
+  const maxRateList = [];
   do {
-    const latestMarketUpdate = MARKETS_MAP[market].get(i);
-    const { Fills: fills, Buys: buys } = latestMarketUpdate;
+    const marketUpdate = MARKETS_MAP[market].get(i);
+    const { Fills: fills } = marketUpdate;
     if (fills.length > 0) {
-      return fills.reduce((max, fill) => Math.max(max, fill.Rate), 0);
+      const maxRate = max(map(fills, fill => fill.Rate));
+      if (maxRate > buyRate) {
+        maxRateList.push(maxRate);
+      }
     }
-    if (buys.length > 0) {
-      return buys.reduce((max, buy) => Math.max(max, buy.Rate), 0);
+    if (maxRateList.length === maxRateListLength) {
+      break;
     }
     i--;
   } while (i >= 0);
 
+  if (maxRateList.length > 0) {
+    return max(maxRateList);
+  }
+
   return null;
 }
 
-const SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT = 40;
-const SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT = 30;
-const SELL_RATE_STEP_FIRST_ITERATION = 0.05;
-const SELL_RATE_STEP_SECOND_ITERATION = 0.05;
-const SELL_RATE_STEP_OTHERS_ITERATION = 0.1;
-const SELL_TRACK_CLOSE_TIMEOUT = 50;
 /**
  * Make sell order by chunk
  *
  * @param {Object} params
  */
 async function sellChunk(params) {
-  const { market, chunkTargetAmount, targetCurrency } = params;
+  const { market, buyRate, chunkTargetAmount, targetCurrency } = params;
   let quantity = chunkTargetAmount;
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 10; i++) {
     // Wait till best time to start selling
     if (i === 0) {
-      if (getCurrentTime() < SIGNAL_SELL_START_TIME_FIRST_ROUND) {
-        tradeLogger.info(
-          "[SELL] Wait till best time to sell for 1st iteration",
-        );
-        await waitTill(SIGNAL_SELL_START_TIME_FIRST_ROUND);
-      }
-    } else if (i >= 1) {
-      if (getCurrentTime() < SIGNAL_SELL_START_TIME_OTHERS_ROUND) {
-        tradeLogger.info(
-          "[SELL] Wait till best time to sell for 2nd iteration onwards",
-        );
-        await waitTill(SIGNAL_SELL_START_TIME_OTHERS_ROUND);
+      if (getCurrentTime() < SIGNAL_SELL_START_TIME) {
+        tradeLogger.info("[SELL] Wait till best time to sell for 1st round");
+        await waitTill(SIGNAL_SELL_START_TIME);
       }
     }
 
-    const maxFillRate = getMaxFillRate(market);
+    const baseRate = getBaseRateForSell(market, buyRate, i);
 
-    // Invalid max fill rate
-    if (maxFillRate == null || maxFillRate === 0) {
-      tradeLogger.error("[SELL] Invalid sell rate!!!");
+    // Check for invalid base sell rate
+    if (baseRate == null || baseRate === 0) {
+      tradeLogger.error("[SELL] Invalid base sell rate!!!");
       await sleep(1000);
       continue;
     }
 
     // Calculate rate
     let rate;
-    let iterationCount;
     if (i === 0) {
-      iterationCount = SELL_TRACK_CLOSE_FIRST_ITERATION_COUNT;
       rate = floor(
-        maxFillRate * (1 + SELL_RATE_STEP_FIRST_ITERATION),
+        baseRate * (1 + SELL_RATE_STEP_FIRST_ITERATION),
         CURRENCY_PRECISION,
       );
     } else if (i === 1) {
-      iterationCount = SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT;
       rate = floor(
-        maxFillRate * (1 - SELL_RATE_STEP_SECOND_ITERATION),
+        baseRate * (1 - SELL_RATE_STEP_SECOND_ITERATION),
+        CURRENCY_PRECISION,
+      );
+    } else if (i === 2) {
+      rate = floor(
+        baseRate * (1 - SELL_RATE_STEP_THIRD_ITERATION),
         CURRENCY_PRECISION,
       );
     } else {
-      iterationCount = SELL_TRACK_CLOSE_OTHERS_ITERATION_COUNT;
       rate = floor(
-        maxFillRate * (1 - SELL_RATE_STEP_OTHERS_ITERATION),
+        baseRate * (1 - SELL_RATE_STEP_OTHERS_ITERATION),
         CURRENCY_PRECISION,
       );
     }
@@ -291,16 +307,7 @@ async function sellChunk(params) {
 
     let remainingQuantity = 0;
     let isOrderClosed = false;
-    for (let j = 0; j < iterationCount; j++) {
-      if (i === 0) {
-        if (getCurrentTime() > SIGNAL_SELL_START_TIME_OTHERS_ROUND) {
-          tradeLogger.warn(
-            `[SELL] Takes too long for selling in 1st iteration. We will move forward to 2nd iteration`,
-          );
-          break;
-        }
-      }
-
+    for (let j = 0; j < SELL_TRACK_CLOSE_ITERATION_COUNT; j++) {
       tradeLogger.info(
         `[SELL] Fetch information for order ${orderId} for ${j + 1} time(s)`,
       );
@@ -360,9 +367,28 @@ async function sellChunk(params) {
   }
 }
 
-const BUY_RATE_STEP = 0.1;
+/* BUY CONSTANTS */
+const BUY_RATE_STEP = 0.15;
 const BUY_TRACK_CLOSE_ITERATION = 40;
 const BUY_TRACK_CLOSE_TIMEOUT = 50;
+
+/**
+ * Get the base rate to make buy purchase
+ *
+ * @param {Object} latestMarketUpdate
+ * @returns {Number}
+ */
+function getBaseRateForBuy(latestMarketUpdate) {
+  if (latestMarketUpdate.Fills.length === 0) {
+    return null;
+  }
+  const averageFillRate = mean(
+    uniq(map(latestMarketUpdate.Fills, fill => fill.Rate)),
+  );
+
+  return averageFillRate;
+}
+
 /**
  * Make buy order by chunks
  * @param {Object} params
@@ -380,15 +406,14 @@ async function buyChunk(params) {
 
   // Calculate rate
   const latestMarketUpdate = MARKETS_MAP[market].peekBack();
-  const minFillRate = latestMarketUpdate.Fills.reduce(
-    (min, fill) => Math.min(min, fill.Rate),
-    Infinity,
-  );
-  if (minFillRate == null || minFillRate > 1) {
+  const baseRate = getBaseRateForBuy(latestMarketUpdate);
+
+  // Check for invalid base buy rate
+  if (baseRate == null) {
     tradeLogger.info(`[BUY] Invalid Buy Rate!!!`);
     return;
   }
-  const rate = floor(minFillRate * (1 + BUY_RATE_STEP), CURRENCY_PRECISION);
+  const rate = floor(baseRate * (1 + BUY_RATE_STEP), CURRENCY_PRECISION);
 
   // Calculate quantity to buy
   const quantity = floor(actualAmount / rate, CURRENCY_PRECISION);
@@ -407,7 +432,7 @@ async function buyChunk(params) {
   let remainingQuantity = quantity;
   let isOrderClosed = false;
   for (let j = 0; j < BUY_TRACK_CLOSE_ITERATION; j++) {
-    if (getCurrentTime() > SIGNAL_BUY_DEADLINE_TIME) {
+    if (getCurrentTime() > SIGNAL_BUY_END_DEADLINE_TIME) {
       tradeLogger.warn(
         `[BUY] Current time surpassed buy deadline. We will attempt to cancel the order asap`,
       );
@@ -512,19 +537,27 @@ async function main() {
   const potentialMarket = await socketTrack(SIGNAL_TIME);
 
   // Prompt to confirm the potential market to exchange
-  const { confirm: marketConfirm } = await inquirer.prompt({
-    type: "input",
-    name: "confirm",
-    message: `One potential market is ${potentialMarket}. Do you want to proceed or choose another market?`,
-  });
-  let market;
-  if (marketConfirm.trim().length === 0) {
-    market = potentialMarket;
-  } else {
-    market = `${sourceCurrency}-${marketConfirm.trim().toUpperCase()}`;
-  }
+  // const { confirm: marketConfirm } = await inquirer.prompt({
+  //   type: "input",
+  //   name: "confirm",
+  //   message: `One potential market is ${potentialMarket}. Do you want to proceed or choose another market?`,
+  // });
+  // let market;
+  // if (marketConfirm.trim().length === 0) {
+  //   market = potentialMarket;
+  // } else {
+  //   market = `${sourceCurrency}-${marketConfirm.trim().toUpperCase()}`;
+  // }
 
-  // Define target currency & corresponding market
+  // Define market & target currency from potential market
+  if (getCurrentTime() > SIGNAL_BUY_START_DEADLINE_TIME) {
+    tradeLogger.error(
+      `[PREP] Detection of potential market ${potentialMarket} is too late. We will not attempt to make buy orders`,
+    );
+    return;
+  }
+  tradeLogger.info(`[PREP] Potential Market: ${potentialMarket}`);
+  const market = potentialMarket;
   const targetCurrency = market.split("-")[1];
 
   // Buy by chunks
