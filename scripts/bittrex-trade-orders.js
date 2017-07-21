@@ -57,7 +57,7 @@ const tradeLogger = new winston.Logger({
 /* GENERAL CONSTANTS */
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
 const SIGNAL_BUY_START_DEADLINE_TIME = SIGNAL_TIME + 5 * 1000;
-const SIGNAL_BUY_END_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
+const SIGNAL_BUY_END_DEADLINE_TIME = SIGNAL_TIME + 18 * 1000;
 const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 20 * 1000;
 const CHUNK_COUNT = 1;
 
@@ -182,9 +182,9 @@ function socketTrack(targetTime = SIGNAL_TIME) {
 /* SELL CONSTANTS */
 const SELL_TRACK_CLOSE_ITERATION_COUNT = 15;
 const SELL_RATE_STEP_FIRST_ITERATION = 0;
-const SELL_RATE_STEP_SECOND_ITERATION = 0.025;
-const SELL_RATE_STEP_THIRD_ITERATION = 0.05;
-const SELL_RATE_STEP_OTHERS_ITERATION = 0.075;
+const SELL_RATE_STEP_SECOND_ITERATION = 0.0125;
+const SELL_RATE_STEP_THIRD_ITERATION = 0.025;
+const SELL_RATE_STEP_OTHERS_ITERATION = 0.05;
 const SELL_TRACK_CLOSE_TIMEOUT = 50;
 
 /**
@@ -264,7 +264,7 @@ async function sellChunk(params) {
     let rate;
     if (i === 0) {
       rate = floor(
-        baseRate * (1 + SELL_RATE_STEP_FIRST_ITERATION),
+        baseRate * (1 - SELL_RATE_STEP_FIRST_ITERATION),
         CURRENCY_PRECISION,
       );
     } else if (i === 1) {
