@@ -58,7 +58,7 @@ const tradeLogger = new winston.Logger({
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
 const SIGNAL_BUY_START_DEADLINE_TIME = SIGNAL_TIME + 5 * 1000;
 const SIGNAL_BUY_END_DEADLINE_TIME = SIGNAL_TIME + 15 * 1000;
-const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 30 * 1000;
+const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 20 * 1000;
 const CHUNK_COUNT = 1;
 
 /**
@@ -180,9 +180,9 @@ function socketTrack(targetTime = SIGNAL_TIME) {
 }
 
 /* SELL CONSTANTS */
-const SELL_TRACK_CLOSE_ITERATION_COUNT = 35;
-const SELL_RATE_STEP_FIRST_ITERATION = 0.025;
-const SELL_RATE_STEP_SECOND_ITERATION = 0;
+const SELL_TRACK_CLOSE_ITERATION_COUNT = 15;
+const SELL_RATE_STEP_FIRST_ITERATION = 0;
+const SELL_RATE_STEP_SECOND_ITERATION = 0.025;
 const SELL_RATE_STEP_THIRD_ITERATION = 0.05;
 const SELL_RATE_STEP_OTHERS_ITERATION = 0.075;
 const SELL_TRACK_CLOSE_TIMEOUT = 50;
@@ -535,19 +535,6 @@ async function main() {
 
   // Track orders and get potential market through WebSocket
   const potentialMarket = await socketTrack(SIGNAL_TIME);
-
-  // Prompt to confirm the potential market to exchange
-  // const { confirm: marketConfirm } = await inquirer.prompt({
-  //   type: "input",
-  //   name: "confirm",
-  //   message: `One potential market is ${potentialMarket}. Do you want to proceed or choose another market?`,
-  // });
-  // let market;
-  // if (marketConfirm.trim().length === 0) {
-  //   market = potentialMarket;
-  // } else {
-  //   market = `${sourceCurrency}-${marketConfirm.trim().toUpperCase()}`;
-  // }
 
   // Define market & target currency from potential market
   if (getCurrentTime() > SIGNAL_BUY_START_DEADLINE_TIME) {
