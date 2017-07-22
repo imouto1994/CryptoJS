@@ -7,11 +7,11 @@ const max = require("lodash/max");
 const uniq = require("lodash/uniq");
 const map = require("lodash/map");
 
-const LOG_FILE_NAME = "bittrex-track-orders-socket-2017-7-18 23:46:14.log";
-const TARGET_SIGNAL_TIME = moment("07-18 16:00 +0000", "MM-DD HH:mm Z")
+const LOG_FILE_NAME = "bittrex-track-orders-socket-2017-7-21 23:39:11.log";
+const TARGET_SIGNAL_TIME = moment("07-21 16:00 +0000", "MM-DD HH:mm Z")
   .toDate()
   .getTime();
-const MARKET = "BTC-BRK";
+const MARKET = "BTC-NXC";
 
 // const LOG_FILE_NAME = "bittrex-track-orders-socket-2017-7-20 23:46:59.log";
 // const TARGET_SIGNAL_TIME = moment("07-20 16:00 +0000", "MM-DD HH:mm Z")
