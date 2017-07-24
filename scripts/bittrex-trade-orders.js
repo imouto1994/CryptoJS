@@ -77,6 +77,22 @@ function waitTill(targetTime) {
   });
 }
 
+function hasBumpedBeforeSignal(fills, targetTime) {
+  let fillsBeforeSignalCount = 0;
+  forEach(fills, fill => {
+    const fillTimeStamp = getTimeInUTC(fill.TimeStamp);
+    // Filled at least 2 seconds ahead of target time
+    if (fillTimeStamp < targetTime - 2 * 1000) {
+      fillsBeforeSignalCount++;
+    }
+  });
+  if (fillsBeforeSignalCount > 0.8 * fills.length) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Track orders through WebSocket
  * @param {Number} [targetTime=SIGNAL_TIME]
@@ -131,18 +147,12 @@ function socketTrack(targetTime = SIGNAL_TIME) {
         // Check if this is a potential market after signal
         let isPotentialMarketAfterSignal = true;
         let hasBumpedMarketBeforeSignal = false;
-        let fillsBeforeSignalCount = 0;
 
         // Check all fill's timestamps if they were before the signal
         if (currentTime < targetTime) {
           isPotentialMarketAfterSignal = false;
         } else {
-          forEach(marketDelta.Fills, fill => {
-            if (getTimeInUTC(fill.TimeStamp) < targetTime) {
-              fillsBeforeSignalCount++;
-            }
-          });
-          if (fillsBeforeSignalCount > 0.75 * marketDelta.Fills.length) {
+          if (hasBumpedBeforeSignal(marketDelta.Fills, targetTime)) {
             isPotentialMarketAfterSignal = false;
           }
         }
@@ -155,13 +165,7 @@ function socketTrack(targetTime = SIGNAL_TIME) {
               hasBumpedMarketBeforeSignal = true;
               break;
             }
-            let counter = 0;
-            forEach(marketUpdate.Fills, fill => {
-              if (getTimeInUTC(fill.TimeStamp) < targetTime) {
-                counter++;
-              }
-            });
-            if (counter > 0.75 * marketUpdate.Fills.length) {
+            if (hasBumpedBeforeSignal(marketUpdate.Fills, targetTime)) {
               hasBumpedMarketBeforeSignal = true;
               break;
             }
