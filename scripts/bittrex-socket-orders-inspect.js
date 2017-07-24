@@ -62,8 +62,12 @@ fs.readFile(
       );
       forEach(update.Fills, fill => console.log(JSON.stringify(fill)));
       if (update.Fills.length > 0) {
-        const averageFillRate = max(uniq(map(update.Fills, fill => fill.Rate)));
+        const averageFillRate = mean(
+          uniq(map(update.Fills, fill => fill.Rate)),
+        );
         console.log("AVERAGE FILL RATE", averageFillRate);
+        const maxFillRate = max(uniq(map(update.Fills, fill => fill.Rate)));
+        console.log("MAX FILL RATE", maxFillRate);
       }
       console.log("-------------------------");
     });

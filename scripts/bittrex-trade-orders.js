@@ -56,9 +56,9 @@ const tradeLogger = new winston.Logger({
 
 /* GENERAL CONSTANTS */
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
-const SIGNAL_BUY_START_DEADLINE_TIME = SIGNAL_TIME + 6 * 1000;
+const SIGNAL_BUY_START_DEADLINE_TIME = SIGNAL_TIME + 5 * 1000;
 const SIGNAL_BUY_END_DEADLINE_TIME = SIGNAL_TIME + 18 * 1000;
-const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 21 * 1000;
+const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 20 * 1000;
 const CHUNK_COUNT = 1;
 
 /**
@@ -81,8 +81,8 @@ function hasBumpedBeforeSignal(fills, targetTime) {
   let fillsBeforeSignalCount = 0;
   forEach(fills, fill => {
     const fillTimeStamp = getTimeInUTC(fill.TimeStamp);
-    // Filled at least 2 seconds ahead of target time
-    if (fillTimeStamp < targetTime - 2 * 1000) {
+    // Filled at least 1 second ahead of target time
+    if (fillTimeStamp < targetTime - 1 * 1000) {
       fillsBeforeSignalCount++;
     }
   });
@@ -184,7 +184,7 @@ function socketTrack(targetTime = SIGNAL_TIME) {
 }
 
 /* SELL CONSTANTS */
-const SELL_TRACK_CLOSE_ITERATION_COUNT = 15;
+const SELL_TRACK_CLOSE_ITERATION_COUNT = 16;
 const SELL_RATE_STEP_FIRST_ITERATION = 0;
 const SELL_RATE_STEP_SECOND_ITERATION = 0.0125;
 const SELL_RATE_STEP_THIRD_ITERATION = 0.025;
