@@ -8,10 +8,10 @@ const { getBittrexApiSign, getNonce } = require("../auth");
 const { get } = require("../request");
 
 /**
- * 
- * 
- * @param {any} currency 
- * @returns 
+ *
+ *
+ * @param {any} currency
+ * @returns
  */
 function getAccountBalance(currency) {
   const url = `${BITTREX_GET_BALANCE_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&currency=${currency}`;
@@ -35,10 +35,10 @@ function getAccountBalance(currency) {
 }
 
 /**
- * 
- * 
- * @param {any} orderId 
- * @returns 
+ *
+ *
+ * @param {any} orderId
+ * @returns
  */
 function getAccountOrder(orderId) {
   const url = `${BITTREX_GET_ORDER_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&uuid=${orderId}`;
@@ -61,10 +61,10 @@ function getAccountOrder(orderId) {
 }
 
 /**
- * 
- * 
- * @param {any} market 
- * @returns 
+ *
+ *
+ * @param {any} market
+ * @returns
  */
 function getAccountOrdersHistory(market) {
   const url = `${BITTREX_GET_ORDERS_HISTORY_URL}?apikey=${BITTREX_API_KEY}&nonce=${getNonce()}&market=${market}`;
@@ -75,7 +75,6 @@ function getAccountOrdersHistory(market) {
   }).then(function(res) {
     const { body } = res;
     if (body.success) {
-      console.log(body.result);
       return body.result;
     } else {
       return Promise.reject(
