@@ -184,7 +184,7 @@ function socketTrack(targetTime = SIGNAL_TIME) {
 }
 
 /* SELL CONSTANTS */
-const SELL_TRACK_CLOSE_ITERATION_COUNT = 16;
+const SELL_TRACK_CLOSE_ITERATION_COUNT = 45;
 const SELL_RATE_STEP_FIRST_ITERATION = 0;
 const SELL_RATE_STEP_SECOND_ITERATION = 0.0125;
 const SELL_RATE_STEP_THIRD_ITERATION = 0.025;
@@ -288,21 +288,26 @@ async function sellChunk(params) {
       );
     }
 
-    // Make sell order
+    // Make sell order. Retry at most 5 times if failed to make sell order
     let orderId;
-    try {
-      orderId = await makeSellOrder({
-        market,
-        quantity,
-        rate,
-      });
-      tradeLogger.info(
-        `[SELL] Attempted for AMOUNT of ${quantity} ${targetCurrency} at RATE ${rate}`,
-      );
-    } catch (err) {
-      tradeLogger.error(
-        `[SELL] Failed to attempt for AMOUNT of ${quantity} ${targetCurrency} at RATE ${rate}`,
-      );
+    let sellRetryCounter = 0;
+    while (orderId == null && sellRetryCounter < 5) {
+      try {
+        orderId = await makeSellOrder({
+          market,
+          quantity,
+          rate,
+        });
+        tradeLogger.info(
+          `[SELL] Attempted for AMOUNT of ${quantity} ${targetCurrency} at RATE ${rate}`,
+        );
+        sellRetryCounter++;
+      } catch (err) {
+        tradeLogger.error(
+          `[SELL] Failed to attempt for AMOUNT of ${quantity} ${targetCurrency} at RATE ${rate}`,
+        );
+        sellRetryCounter++;
+      }
     }
 
     if (orderId == null) {
@@ -373,7 +378,7 @@ async function sellChunk(params) {
 
 /* BUY CONSTANTS */
 const BUY_RATE_STEP = 0.125;
-const BUY_TRACK_CLOSE_ITERATION = 40;
+const BUY_TRACK_CLOSE_ITERATION = 60;
 const BUY_TRACK_CLOSE_TIMEOUT = 50;
 
 /**
