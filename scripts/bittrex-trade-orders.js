@@ -58,7 +58,7 @@ const tradeLogger = new winston.Logger({
 const SIGNAL_TIME = moment("16:00 +0000", "HH:mm Z").toDate().getTime();
 const SIGNAL_BUY_START_DEADLINE_TIME = SIGNAL_TIME + 5 * 1000;
 const SIGNAL_BUY_END_DEADLINE_TIME = SIGNAL_TIME + 18 * 1000;
-const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 20 * 1000;
+const SIGNAL_SELL_START_TIME = SIGNAL_TIME + 28 * 1000;
 const CHUNK_COUNT = 1;
 
 /**
